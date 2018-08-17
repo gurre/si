@@ -1,10 +1,15 @@
 package si
 
+import "fmt"
+
 type Measure int
 
 const (
+	// None is the empty measure
 	None Measure = iota
+	// Length is meters
 	Length
+	// Mass is grams
 	Mass
 	Time
 	ElectricCurrent
@@ -104,70 +109,70 @@ func (measure Measure) String() string {
 }
 
 // Parse takes a string generated from String() and converts it back to a unit.
-func Parse(str string) (measure Measure) {
+func Parse(str string) (measure Measure, err error) {
 	switch str {
 	case "m":
-		return Length
+		return Length, nil
 	case "kg":
-		return Mass
+		return Mass, nil
 	case "s":
-		return Time
+		return Time, nil
 	case "A":
-		return ElectricCurrent
+		return ElectricCurrent, nil
 	case "K":
-		return ThermodynamicTemperature
+		return ThermodynamicTemperature, nil
 	case "mol":
-		return AmountOfSubstance
+		return AmountOfSubstance, nil
 	case "cd":
-		return LuminousIntensity
+		return LuminousIntensity, nil
 	case "rad":
-		return Angle
+		return Angle, nil
 	case "sr":
-		return SolidAngle
+		return SolidAngle, nil
 	case "Hz":
-		return Frequency
+		return Frequency, nil
 	case "N":
-		return Force
+		return Force, nil
 	case "Pa":
-		return Pressure
+		return Pressure, nil
 	case "J":
-		return Energy
+		return Energy, nil
 	case "W":
-		return Power
+		return Power, nil
 	case "C":
-		return ElectricCharge
+		return ElectricCharge, nil
 	case "V":
-		return Voltage
+		return Voltage, nil
 	case "F":
-		return Capacitance
+		return Capacitance, nil
 	case "Ω":
-		return Impedance
+		return Impedance, nil
 	case "S":
-		return ElectricalConductance
+		return ElectricalConductance, nil
 	case "Wb":
-		return MagneticFlux
+		return MagneticFlux, nil
 	case "T":
-		return MagneticFluxDensity
+		return MagneticFluxDensity, nil
 	case "H":
-		return Inductance
+		return Inductance, nil
 	case "°C":
-		return Temperature
+		return Temperature, nil
 	case "lm":
-		return LuminousFlux
+		return LuminousFlux, nil
 	case "lx":
-		return Illuminance
+		return Illuminance, nil
 	case "Bq":
-		return Radioactivity
+		return Radioactivity, nil
 	case "Gy":
-		return AbsorbedDose
+		return AbsorbedDose, nil
 	case "Sv":
-		return EquivalentDose
+		return EquivalentDose, nil
 	case "kat":
-		return CatalyticActivity
+		return CatalyticActivity, nil
 	case "":
-		return None
+		return None, fmt.Errorf("An empty string is not a recognized SI symbol", str)
 	default:
-		return None
+		return None, fmt.Errorf("%s is not a recognized SI symbol", str)
 	}
 }
 

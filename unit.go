@@ -17,9 +17,9 @@ func NewUnit(val float64, quantities ...Quantity) (*Unit, error) {
 	return u, nil
 }
 
-// Value returns the underlying exact value
-func (u *Unit) Value() float64 {
-	return u.value
+// ValueUnit returns the underlying value and unit, useful when you don't want a string
+func (u *Unit) ValueUnit() (float64, *Unit) {
+	return u.value, u
 }
 
 // BigInt returns the SI unit as a big.Int-number

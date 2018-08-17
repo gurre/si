@@ -4,7 +4,7 @@
 [![License](http://img.shields.io/:license-MIT-blue.svg?style=flat)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gurre/si)](https://goreportcard.com/report/github.com/gurre/si)
 
-Working with sensors requires some extra thought into how you report measurements. This library provides a way to type several aspects of any sensor data which makes things easier down the road.
+Working with sensors requires some extra thought into how you report measurements. The need for this library arised when several sensors where reporting different units which was confused or hard to distinguish in the backend. E.g. one sensor reporting km/h and another m/s.
 
 ## Installation
 
@@ -16,14 +16,33 @@ go get github.com/gurre/si
 
 ## Usage examples
 
+Simple usage:
+
+```go
+// Our sensor reports temperature in millidegrees celcius
+mc := si.NewQuantity(si.Milli, si.Temperature)
+
+// Make sure we never forget what unit we are measuring in
+temp := si.NewUnit(24062, mc)
+
+fmt.Println(temp)
+// 24062 m°C
+```
+
+Combining several quantities:
+
 ```go
 // NewQuantity takes a prefix and a measure
 km := si.NewQuantity(si.Kilo, si.Length)
+
 // Hour is not a SI unit but officially accepted
 h := si.NewQuantity(si.Hour, si.Time)
+
 // Combine a value with several SI-units
-kmh := si.NewUnit(100, km,h)
+kmh := si.NewUnit(100, km, h)
+
 parsed := si.Parse(kmh.String())
+
 fmt.Println(kmh, parsed)
 // 100.0 km/h 100.0 km/h
 ```
