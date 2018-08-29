@@ -1,9 +1,8 @@
 <h1 align="center">
-    <img src="https://github.com/gurre/si/blob/master/gopher_si.png" alt="Mascot" width="200">
-    <br>
+    <img src="https://github.com/gurre/si/blob/master/gopher_si.png" alt="Mascot" width="300">
+    <br />
+    Système international (SI)
 </h1>
-
-# Système international (SI)
 
 [![GoDoc](https://godoc.org/github.com/gurre/si?status.svg)](https://godoc.org/github.com/gurre/si)
 [![License](http://img.shields.io/:license-MIT-blue.svg?style=flat)](LICENSE)
