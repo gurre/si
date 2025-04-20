@@ -4,54 +4,86 @@
     Système international (SI)
 </h1>
 
-[![GoDoc](https://godoc.org/github.com/gurre/si?status.svg)](https://godoc.org/github.com/gurre/si)
-[![License](http://img.shields.io/:license-MIT-blue.svg?style=flat)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gurre/si)](https://goreportcard.com/report/github.com/gurre/si)
+<p align="center">
+  <b>A powerful, type-safe unit conversion library for Go</b>
+</p>
 
-Working with sensors requires some extra thought into how you report measurements. The need for this library arised when several sensors where reporting different units which was confused or hard to distinguish in the backend. E.g. one sensor reporting km/h and another m/s.
+<p align="center">
+  <a href="https://godoc.org/github.com/gurre/si"><img src="https://godoc.org/github.com/gurre/si?status.svg" alt="GoDoc"></a>
+  <a href="https://goreportcard.com/report/github.com/gurre/si"><img src="https://goreportcard.com/badge/github.com/gurre/si" alt="Go Report Card"></a>
+</p>
 
-## Installation
+## 🌟 Overview
 
-Windows, OS X & Linux:
+SI is a Go library that brings the power and precision of the International System of Units (SI) to your code. Say goodbye to unit conversion bugs and inconsistencies!
 
-```
+## 🚀 Installation
+
+```bash
 go get github.com/gurre/si
 ```
 
-## Usage examples
+## 💡 Key Features
 
-Simple usage:
+- **Type-safe unit conversions** - Catch dimensional errors at compile-time
+- **Natural syntax** - Write code that reads like physics equations
+- **Comprehensive unit support** - All 7 SI base units plus derived units
+- **Binary prefix support** - Handle digital units like MiB, GiB correctly
+- **Simple API** - Intuitive helper functions for common units
+- **Extensible** - Create and combine your own custom units
 
-```go
-// Our sensor reports temperature in millidegrees celcius
-mc := si.NewQuantity(si.Milli, si.Temperature)
+## 📚 Usage Examples
 
-// Make sure we never forget what unit we are measuring in
-temp := si.NewUnit(24062, mc)
-
-fmt.Println(temp)
-// 24062 m°C
-```
-
-Combining several quantities:
+### Basic Unit Creation and Conversion
 
 ```go
-// NewQuantity takes a prefix and a measure
-km := si.NewQuantity(si.Kilo, si.Length)
+// Create units with intuitive helper functions
+distance := si.Kilometers(10)
+time := si.Minutes(30)
 
-// Hour is not a SI unit but officially accepted
-h := si.NewQuantity(si.Hour, si.Time)
+// Calculate speed
+speed := distance.Div(time)
+fmt.Println(speed) // Output: 20 km/m
 
-// Combine a value with several SI-units
-kmh := si.NewUnit(100, km, h)
-
-parsed := si.Parse(kmh.String())
-
-fmt.Println(kmh, parsed)
-// 100.0 km/h 100.0 km/h
+// Convert to different units
+kmh, _ := speed.ConvertTo(si.Kilometers(1).Div(si.Hours(1)))
+fmt.Println(kmh) // Output in km/h
 ```
 
-## More reading
+### Physics Calculations
 
-- [SI base unit](https://en.wikipedia.org/wiki/SI_base_unit)
-- [Non-SI units mentioned in the SI](https://en.wikipedia.org/wiki/Non-SI_units_mentioned_in_the_SI)
+```go
+// Newton's Second Law: F = ma
+mass := si.Kilograms(75)
+acceleration := si.Meters(9.8).Div(si.Second.Pow(2))
+force := mass.Mul(acceleration)
+fmt.Println("Force:", force)
+// Force: 735 N
+
+// Example: Calculate kinetic energy (KE = 1/2 * m * v^2)
+mass := si.Kilograms(1500)        // Mass of a car in kg
+velocity, _ := si.Parse("20 m/s") // Velocity in m/s
+kineticEnergy := si.Scalar(0.5).Mul(mass).Mul(velocity.Pow(2))
+fmt.Println("Kinetic energy of a car:", kineticEnergy)
+// Kinetic energy of a car: 300000 J
+```
+
+
+
+## 🔍 Why Use This Library?
+
+Unit conversion errors have caused catastrophic failures in the past, like the [Mars Climate Orbiter crash](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter#Cause_of_failure). By using SI, you get:
+
+- **Safety**: Automatic dimensional analysis prevents mixing incompatible units
+- **Clarity**: Code that expresses intent through proper units
+- **Precision**: Consistent handling of unit prefixes and conversions
+- **Simplicity**: Natural expression of complex physical relationships
+
+## 📖 Documentation
+
+For complete documentation, visit the [GoDoc page](https://godoc.org/github.com/gurre/si).
+
+## 📄 License
+
+Distributed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+
