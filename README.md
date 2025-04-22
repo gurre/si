@@ -84,17 +84,17 @@ Without proper unit handling, your historical data becomes a minefield. With SI:
 ```go
 // Temperature readings from different eras, all with units attached
 readings := []si.Unit{
-  si.Celsius(22.5),                // 2022 sensor
-  si.MustParse("98.6 degF"),       // 2023 sensor (Note: Library uses explicit temp functions)
-  si.Kelvin.Mul(si.Scalar(295.15)), // 2024 sensor
+    si.Celsius(22.5),    // 2022 sensor
+    si.Fahrenheit(72.6), // 2023 sensor
+    si.Kelvins(295.7),   // 2024 sensor
 }
 
 // All temperatures converted to a standard unit for analysis
 for _, temp := range readings {
-  // No need to know which era a reading is from
-  // No need to check field names or metadata
-  // The value itself contains its lineage
-  fmt.Printf("Temperature: %.2f K (%.2f C)\n", temp, temp.ToCelsius)
+    // No need to know which era a reading is from
+    // No need to check field names or metadata
+    c, _ := si.ToCelsius(temp)
+    fmt.Printf("Temperature: %s (%.2f C)\n", temp, c)
 }
 ```
 
