@@ -641,7 +641,7 @@ func TestString(t *testing.T) {
 		{"kelvin", si.Kelvin.Mul(si.Scalar(273.15)), "273.15 K"},
 		{"mole", si.Mole.Mul(si.Scalar(6.022)), "6.022 mol"},
 
-		// Scaled base units with prefixes
+		// Scaled base units (using SI prefixes with FormatUnitWithPrefix)
 		{"kilometer", si.Kilometers(5), "5 km"},
 		{"millimeter", si.Meters(0.002), "2 mm"},
 		{"microsecond", si.Second.Mul(si.Scalar(1e-6)), "1 μs"},
@@ -661,12 +661,12 @@ func TestString(t *testing.T) {
 		{"velocity", si.Meter.Div(si.Second).Mul(si.Scalar(20)), "20 m/s"},
 		{"acceleration", si.Meter.Div(si.Second.Pow(2)).Mul(si.Scalar(9.81)), "9.81 m/s^2"},
 		{"energy_density", si.Joule.Div(si.Meter.Pow(3)).Mul(si.Scalar(5000)), "5 kPa"},
-		{"pressure_grad", si.Pascal.Div(si.Meter).Mul(si.Scalar(10)), "10 kg/m^2·s^2"},
+		{"pressure_grad", si.Pascal.Div(si.Meter).Mul(si.Scalar(10)), "10 kg/(s^2*m^2)"},
 
 		// Edge cases
 		{"zero", si.Scalar(0), "0"},
 		{"dimensionless", si.Scalar(0.75), "0.75"},
-		{"very_large", si.Meter.Mul(si.Scalar(1e15)), "1000000 Gm"},
+		{"very_large", si.Meter.Mul(si.Scalar(1e15)), "1e+06 Gm"},
 		{"very_small", si.Second.Mul(si.Scalar(1e-15)), "0.001 ps"},
 	}
 
@@ -762,5 +762,49 @@ func TestKelvinsFunction(t *testing.T) {
 	expectedF := (300-273.15)*9/5 + 32
 	if math.Abs(f-expectedF) > 0.001 {
 		t.Errorf("Fahrenheit conversion incorrect: expected %f F, got %f F", expectedF, f)
+	}
+}
+
+// TestPsiUnit tests the PSI pressure unit functionality
+func TestPsiUnit(t *testing.T) {
+	// Create a pressure in PSI
+	pressure := si.Psi(14.7) // Approximately 1 atm
+
+	// Check dimension is correct
+	if !si.IsDimension(pressure, si.Pascal.Dimension) {
+		t.Error("PSI pressure has incorrect dimension")
+	}
+
+	// Test conversion from string
+	pressureFromStr, err := si.Parse("14.7 psi")
+	if err != nil {
+		t.Errorf("Failed to parse PSI value: %v", err)
+	}
+
+	// Calculate expected value in Pascals
+	expectedPa := 14.7 * 6894.76
+
+	// Verify the value of direct creation matches expected
+	if math.Abs(pressure.Value-expectedPa) > 0.1 {
+		t.Errorf("PSI pressure value incorrect: got %f Pa, expected %f Pa",
+			pressure.Value, expectedPa)
+	}
+
+	// Verify parsed value matches expected
+	if math.Abs(pressureFromStr.Value-expectedPa) > 0.1 {
+		t.Errorf("Parsed PSI pressure value incorrect: got %f Pa, expected %f Pa",
+			pressureFromStr.Value, expectedPa)
+	}
+
+	// Test conversion to kPa
+	kPa, err := si.ToKiloPascals(pressure)
+	if err != nil {
+		t.Errorf("Failed to convert PSI to kPa: %v", err)
+	}
+
+	expectedKPa := expectedPa / 1000
+	if math.Abs(kPa-expectedKPa) > 0.01 {
+		t.Errorf("PSI to kPa conversion incorrect: got %f kPa, expected %f kPa",
+			kPa, expectedKPa)
 	}
 }

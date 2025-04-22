@@ -68,6 +68,10 @@ func (ctx *StandardContext) registerDerivedUnits() {
 	pascal := newton.Div(ctx.baseUnits["m"].Pow(2))
 	ctx.derivedUnits["Pa"] = pascal
 
+	// PSI: Pound per square inch (1 psi = 6894.76 Pa)
+	psi := Unit{6894.76, pascal.Dimension}
+	ctx.derivedUnits["psi"] = psi
+
 	// Hertz: 1/s
 	hertz := Unit{1, Dimension{0, 0, -1, 0, 0, 0, 0}}
 	ctx.derivedUnits["Hz"] = hertz

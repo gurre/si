@@ -95,6 +95,9 @@ for _, temp := range readings {
     // No need to check field names or metadata
     c, _ := si.ToCelsius(temp)
     fmt.Printf("Temperature: %s (%.2f C)\n", temp, c)
+    // Temperature: 295.65 K (22.50 C)
+    // Temperature: 295.7055555555555 K (22.56 C)
+    // Temperature: 295.7 K (22.55 C)
 }
 ```
 
@@ -128,9 +131,9 @@ func processHistoricalReading(reading string) (string, error) {
 }
 
 // Works seamlessly with:
-processHistoricalReading("350 kPa")  // From old dataset
-processHistoricalReading("0.35 MPa") // From another system
-processHistoricalReading("50.8 psi") // From imperial sensors
+processHistoricalReading("350 kPa")  // From old dataset, 360.5 kPa
+processHistoricalReading("0.35 MPa") // From another system, 360.5 kPa
+processHistoricalReading("50.8 psi") // From imperial sensors, 360.7614222400001 kPa
 ```
 
 Your historical data remains valuable and accurate, regardless of when or how it was collected.
@@ -192,20 +195,20 @@ distance := si.Kilometers(1.5)                                // 1500 m
 flow := si.Meter.Pow(3).Mul(si.Scalar(0.002)).Div(si.Second)  // 2 L/s
 
 // Parse units from strings (e.g., from sensor readings)
-pressure, _ := si.Parse("101.325 kPa")  // 101325 Pa
-velocity, _ := si.Parse("55 km/h")      // 15.278 m/s
+pressure, _ := si.Parse("101.325 kPa")  // 101.325 kPa
+velocity, _ := si.Parse("55 km/h")      // 15.27777777777778 m/s
 
 // Convert between units
 meters, _ := distance.ConvertTo(si.Meter)
-fmt.Println(meters)  // 1500 m
+fmt.Println(meters)  // 1.5 km
 
 // Temperature conversions
-tempF, _ := si.ToFahrenheit(temp)       // 77.9 F - no manual calculation needed
-tempC, _ := si.ToCelsius(temp)          // 25.5 C - easy conversion back
+tempF, _ := si.ToFahrenheit(temp)       // 77.9
+tempC, _ := si.ToCelsius(temp)          // 25.5
 
 // Perform calculations with units
 power := pressure.Mul(flow)                     // 202.65 W
-energy := power.Mul(si.Hours(2))                // 1459080 J
+energy := power.Mul(si.Hours(2))                // 1.45908 MJ
 ```
 
 ### Real-World IoT Example
@@ -286,3 +289,27 @@ BenchmarkPumpingSystemAnalysis-12        	  739095	     16010 ns/op	   44064 B/o
 BenchmarkElectricalCircuitAnalysis-12    	  364904	     32496 ns/op	   88128 B/op	     312 allocs/op
 ```
 
+# AST-based parser for units
+
+1. The unit system is built around the Unit struct, which contains:
+    - Value: A float64 representing the scalar magnitude of the physical quantity
+    - Dimension: A [7]int array representing the exponents of the 7 SI base dimensions (Length, Mass, Time, Current, Temperature, Substance, Luminosity)
+2. Units are registered in the StandardContext struct, which implements the Context interface. The StandardContext contains:
+    - baseUnits: A map of base unit symbols (e.g., "m", "kg") to their Unit definitions
+    - derivedUnits: A map of derived unit symbols (e.g., "N", "J") to their Unit definitions
+    - prefixes: A map of unit prefixes (e.g., "k", "M") to their scaling factors
+    - sortedPrefixes: A slice of prefixes sorted by length for proper matching
+3. Registration happens in three main methods:
+    - registerBaseUnits(): Registers the 7 SI base units (meter, kilogram, second, ampere, kelvin, mole, candela)
+    - registerDerivedUnits(): Registers derived units (newton, joule, watt, etc.) by combining base units
+    - registerPrefixes(): Registers SI prefixes (kilo, mega, etc.) and binary prefixes (kibi, mebi, etc.)
+4. The entire process is initiated in the NewStandardContext() function, which creates a new context and calls these registration methods.
+5. Unit symbols are resolved via the Resolve() method, which:
+    - Checks for special cases (dimensionless units, gram)
+    - Looks up exact matches in base and derived unit maps
+    - Handles prefixed units by checking if a symbol starts with a known prefix
+    - Returns a Unit with the appropriate value and dimension
+6. Complex unit expressions like "kgm/s^2" are parsed using an AST-based parser:
+    - ParseComplexUnit() tokenizes the input and builds an abstract syntax tree
+    - The parser handles identifiers, numbers, parentheses, and operations (multiplication, division, powers)
+    - The AST nodes are then evaluated with the context to produce a final Unit

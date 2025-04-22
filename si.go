@@ -16,6 +16,7 @@ var (
 	Length = Dimension{1, 0, 0, 0, 0, 0, 0}
 
 	// Mass represents the dimension of mass (kilograms).
+	// Note: kilogram is the SI base unit for mass, unlike other base units which don't have prefixes
 	Mass = Dimension{0, 1, 0, 0, 0, 0, 0}
 
 	// TimeDim represents the dimension of time (seconds).
@@ -55,6 +56,7 @@ var Prefixes = map[string]float64{
 // This allows support for non-standard units like dBm.
 var SymbolicUnits = map[string]Unit{
 	"dBm": {1e-3, Dimension{2, 1, -3, 0, 0, 0, 0}},
+	"psi": {6894.76, Pascal.Dimension}, // 1 psi = 6894.76 Pa
 }
 
 // ParseUnit parses a unit string like "km/h" into a Unit.
@@ -203,54 +205,6 @@ func New(value float64, symbol string) Unit {
 	return u
 }
 
-// formatDimension renders a dimension into a string representation.
-// This internal function converts a Dimension into a human-readable string form.
-func formatDimension(d Dimension) string {
-	symbols := []string{"m", "kg", "s", "A", "K", "mol", "cd"}
-	var numerator []string
-	var denominator []string
-
-	for i, exp := range d {
-		if exp == 0 {
-			continue
-		}
-
-		if exp > 0 {
-			if exp == 1 {
-				numerator = append(numerator, symbols[i])
-			} else {
-				numerator = append(numerator, fmt.Sprintf("%s^%d", symbols[i], exp))
-			}
-		} else {
-			if exp == -1 {
-				denominator = append(denominator, symbols[i])
-			} else {
-				denominator = append(denominator, fmt.Sprintf("%s^%d", symbols[i], -exp))
-			}
-		}
-	}
-
-	// Handle special cases
-	if len(numerator) == 0 && len(denominator) == 0 {
-		return "1"
-	}
-
-	if len(numerator) == 0 {
-		numerator = append(numerator, "1")
-	}
-
-	// Build the numerator part
-	numStr := strings.Join(numerator, "·")
-
-	// If there are denominators, append them with "/"
-	if len(denominator) > 0 {
-		denomStr := strings.Join(denominator, "·")
-		return fmt.Sprintf("%s/%s", numStr, denomStr)
-	}
-
-	return numStr
-}
-
 // String returns a human-readable representation of the unit using SI standards.
 // The output includes the value with appropriate scaling prefix and unit symbol.
 //
@@ -262,116 +216,7 @@ func formatDimension(d Dimension) string {
 //	energy := Joule.Mul(Scalar(5000))
 //	fmt.Println(energy) // "5 kJ"
 func (u Unit) String() string {
-	// For dimensionless units, don't print any unit
-	if u.Dimension == Dimensionless {
-		return formatValueWithPrecision(u.Value)
-	}
-
-	// Handle standard SI prefixes based on magnitude
-	// Format value with appropriate SI prefix
-	formattedValue, prefix := formatValueWithPrefix(u.Value)
-
-	// Basic SI units with their symbols
-	unitSymbols := []string{"m", "kg", "s", "A", "K", "mol", "cd"}
-
-	// Simple cases for common SI base units
-	for i, exp := range u.Dimension {
-		if isBaseSIUnit(u.Dimension, i, exp) {
-			return fmt.Sprintf("%s %s%s", formatValueWithPrecision(formattedValue), prefix, unitSymbols[i])
-		}
-	}
-
-	// Common derived units
-	switch {
-	case u.Dimension == Hertz.Dimension:
-		return fmt.Sprintf("%s %sHz", formatValueWithPrecision(formattedValue), prefix)
-
-	case u.Dimension == Newton.Dimension:
-		return fmt.Sprintf("%s %sN", formatValueWithPrecision(formattedValue), prefix)
-
-	case u.Dimension == Pascal.Dimension:
-		return fmt.Sprintf("%s %sPa", formatValueWithPrecision(formattedValue), prefix)
-
-	case u.Dimension == Joule.Dimension:
-		return fmt.Sprintf("%s %sJ", formatValueWithPrecision(formattedValue), prefix)
-
-	case u.Dimension == Watt.Dimension:
-		return fmt.Sprintf("%s %sW", formatValueWithPrecision(formattedValue), prefix)
-
-	case u.Dimension == Volt.Dimension:
-		return fmt.Sprintf("%s %sV", formatValueWithPrecision(formattedValue), prefix)
-	}
-
-	// For compound dimensions, use formal dimension notation
-	return fmt.Sprintf("%s %s", formatValueWithPrecision(u.Value), formatDimension(u.Dimension))
-}
-
-// formatValueWithPrecision formats a float64 with high precision and trims trailing zeros
-// This internal function ensures consistent numeric formatting.
-func formatValueWithPrecision(value float64) string {
-	// Use high precision (%g gives us up to 6 significant digits by default)
-	// Use %.16g to display up to 16 significant digits
-	str := fmt.Sprintf("%.16g", value)
-
-	// The %g format already handles trailing zeros intelligently
-	return str
-}
-
-// formatValueWithPrefix formats a value with the appropriate SI prefix
-// This internal function handles automatic scaling of values with SI prefixes.
-func formatValueWithPrefix(value float64) (float64, string) {
-	absValue := math.Abs(value)
-	var scaledValue float64
-	var prefix string
-
-	switch {
-	case absValue == 0:
-		return 0, ""
-	case absValue >= 1e9:
-		scaledValue = value / 1e9
-		prefix = "G"
-	case absValue >= 1e6:
-		scaledValue = value / 1e6
-		prefix = "M"
-	case absValue >= 1e3:
-		scaledValue = value / 1e3
-		prefix = "k"
-	case absValue >= 1:
-		scaledValue = value
-		prefix = ""
-	case absValue >= 1e-3:
-		scaledValue = value * 1e3
-		prefix = "m"
-	case absValue >= 1e-6:
-		scaledValue = value * 1e6
-		prefix = "μ"
-	case absValue >= 1e-9:
-		scaledValue = value * 1e9
-		prefix = "n"
-	default:
-		scaledValue = value * 1e12
-		prefix = "p"
-	}
-
-	// No need to round here - we'll format with proper precision in String()
-	return scaledValue, prefix
-}
-
-// isBaseSIUnit checks if a dimension represents a simple base SI unit
-// This internal function determines if a dimension is one of the base SI units.
-func isBaseSIUnit(dim Dimension, index int, exponent int) bool {
-	if exponent != 1 {
-		return false
-	}
-
-	// Check if all other dimensions are zero
-	for i, e := range dim {
-		if i != index && e != 0 {
-			return false
-		}
-	}
-
-	return true
+	return FormatUnitWithPrefix(u)
 }
 
 // Named constants for SI base units.
@@ -475,6 +320,20 @@ func Kilometers(n float64) Unit { return New(n*1000, "m") }
 //
 //	length := Meters(1.8)  // 1.8 meters
 func Meters(n float64) Unit { return New(n, "m") }
+
+// Centimeters creates a length unit in centimeters converted to meters.
+//
+// Example:
+//
+//	length := Centimeters(25)  // 25 centimeters = 0.25 meters
+func Centimeters(n float64) Unit { return New(n/100, "m") }
+
+// Millimeters creates a length unit in millimeters converted to meters.
+//
+// Example:
+//
+//	length := Millimeters(150)  // 150 millimeters = 0.15 meters
+func Millimeters(n float64) Unit { return New(n/1000, "m") }
 
 // Mass units
 
@@ -632,6 +491,13 @@ func Newtons(n float64) Unit { return New(n, "N") }
 //
 //	pressure := Pascals(101325)  // 101325 Pa = 1 atm
 func Pascals(n float64) Unit { return New(n, "Pa") }
+
+// Psi creates a pressure unit in pounds per square inch (psi) converted to pascals.
+//
+// Example:
+//
+//	pressure := Psi(14.7)  // 14.7 psi = 101356.5 Pa ≈ 1 atm
+func Psi(n float64) Unit { return New(n*6894.76, "Pa") }
 
 // Joules creates an energy unit in joules.
 //

@@ -151,7 +151,7 @@ func (u Unit) Compare(v Unit) (int, error) {
 //	reading := Reading{Pressure: Pascals(101325)}
 //	data, _ := json.Marshal(reading) // {"pressure":"101.325 kPa"}
 func (u Unit) MarshalJSON() ([]byte, error) {
-	return json.Marshal(u.String())
+	return json.Marshal(FormatUnitWithPrefix(u))
 }
 
 // UnmarshalJSON parses a unit string from JSON like "100 km/h".

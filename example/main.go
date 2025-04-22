@@ -7,18 +7,28 @@ import (
 )
 
 func main() {
-	// Temperature readings from different eras, all with units attached
-	readings := []si.Unit{
-		si.Celsius(22.5),    // 2022 sensor
-		si.Fahrenheit(72.6), // 2023 sensor
-		si.Kelvins(295.7),   // 2024 sensor
-	}
+	// Create units with various representations
+	temp := si.Celsius(25.5)                                     // 298.65 K
+	distance := si.Kilometers(1.5)                               // 1.5 km
+	flow := si.Meter.Pow(3).Mul(si.Scalar(0.002)).Div(si.Second) // 0.002 m^3/s
+	fmt.Println(temp, distance, flow)
 
-	// All temperatures converted to a standard unit for analysis
-	for _, temp := range readings {
-		// No need to know which era a reading is from
-		// No need to check field names or metadata
-		c, _ := si.ToCelsius(temp)
-		fmt.Printf("Temperature: %s (%.2f C)\n", temp, c)
-	}
+	// Parse units from strings (e.g., from sensor readings)
+	pressure, _ := si.Parse("101.325 kPa") // 101325 Pa
+	velocity, _ := si.Parse("55 km/h")     // 15.278 m/s
+	fmt.Println(pressure, velocity)
+
+	// Convert between units
+	meters, _ := distance.ConvertTo(si.Meter)
+	fmt.Println(meters) // 1500 m
+
+	// Temperature conversions
+	tempF, _ := si.ToFahrenheit(temp) // 77.9 F - no manual calculation needed
+	tempC, _ := si.ToCelsius(temp)    // 25.5 C - easy conversion back
+	fmt.Println(tempF, tempC)
+
+	// Perform calculations with units
+	power := pressure.Mul(flow)      // 202.65 W
+	energy := power.Mul(si.Hours(2)) // 1459080 J
+	fmt.Println(power, energy)
 }
