@@ -82,13 +82,17 @@ sensors := []si.Unit{
     si.Celsius(85.4),
 }
 
-// Calculate average temperature
+// Calculate sum using Add method
 sum := si.Celsius(0)
 for _, temp := range sensors {
-    sum = sum.Add(temp).(si.Unit) // Type assertion required
+    newSum, _ := sum.Add(temp)
+    sum = newSum
 }
+
+// Calculate average temperature
 average := sum.Div(si.Scalar(float64(len(sensors))))
 
+fmt.Println("Sum of temperatures:", sum)
 fmt.Println("Average temperature:", average)
 ```
 
@@ -110,7 +114,7 @@ fmt.Println("Valid pressure reading:", isPressure)
 fmt.Println("Valid flow reading:", isFlow)
 
 // Safety check before performing calculations
-if !si.VerifyDimension(sensorReading, si.Temperature) {
+if !si.VerifyDimension(temperatureSensor, si.Temperature) {
     fmt.Println("Error: Expected temperature reading but got different dimension")
 }
 ```
@@ -158,7 +162,34 @@ The SI library is ideal for:
 
 For complete documentation, visit the [GoDoc page](https://godoc.org/github.com/gurre/si).
 
-## 📄 License
+## ⚡️ Benchmarks
 
-Distributed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+The benchmark results show that:
+ - Basic operations (Mul, Div, Pow, Add, ConvertTo) are very fast (<10ns) and don't allocate memory
+ - Parsing and string operations are more expensive (~3μs for Parse, ~90ns for String)
+ - End-to-end calculations take longer (~8-11μs) and require more memory allocations
+ - Complex real-world scenarios are the most resource-intensive (14-35μs with 130-312 allocations)
+
+```
+go test -bench=. -run=^$ -benchtime=60s ./...
+goos: darwin
+goarch: arm64
+pkg: github.com/gurre/si
+cpu: Apple M4 Pro
+BenchmarkParse-12                        	  415167	      2843 ns/op
+BenchmarkMul-12                          	368542444	         3.247 ns/op
+BenchmarkDiv-12                          	368604424	         3.255 ns/op
+BenchmarkPow-12                          	171484599	         7.013 ns/op
+BenchmarkAdd-12                          	381991842	         2.934 ns/op
+BenchmarkConvertTo-12                    	409977426	         2.920 ns/op
+BenchmarkString-12                       	13863883	        86.60 ns/op
+BenchmarkComplexCalculation-12           	134440732	         8.664 ns/op
+BenchmarkHydraulicPower-12               	363623462	         3.307 ns/op
+BenchmarkReynoldsNumber-12               	86047978	        14.02 ns/op
+BenchmarkVerifyDimension-12              	257544004	         4.648 ns/op
+BenchmarkEndToEndFlowCalculation-12      	  109608	     10856 ns/op
+BenchmarkEndToEndEnergyCalculation-12    	  152655	      7710 ns/op
+PASS
+ok  	github.com/gurre/si	20.415s
+```
 

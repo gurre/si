@@ -7,3 +7,4 @@ alwaysApply: true
 - Don't use third-party libraries.
 - Don't use t.Run in tests instead put tests in individual functions for each test case.
 - Comment code by justifying the existance of the code.
+- Write tests and run tests often while making changes.
