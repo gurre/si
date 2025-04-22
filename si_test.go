@@ -242,6 +242,24 @@ func TestParsePanicInvalidValue(t *testing.T) {
 	MustParse("bad m")
 }
 
+// TestParseDimensionlessWithoutUnit tests that we can parse a dimensionless value without a unit suffix
+func TestParseDimensionlessWithoutUnit(t *testing.T) {
+	// Parse a dimensionless value (just a number)
+	result, err := Parse("0.5")
+	assertError(t, err, false, fmt.Sprintf("Parse(%q)", "0.5"))
+	expected := Scalar(0.5)
+	assertUnitEqual(t, result, expected, fmt.Sprintf("Parse(%q)", "0.5"))
+
+	// Ensure the dimension is correct
+	assertDimensionEqual(t, result.Dimension, Dimensionless, "result.Dimension")
+
+	// Test with scientific notation
+	result, err = Parse("1.2e3")
+	assertError(t, err, false, fmt.Sprintf("Parse(%q)", "1.2e3"))
+	expected = Scalar(1200)
+	assertUnitEqual(t, result, expected, fmt.Sprintf("Parse(%q)", "1.2e3"))
+}
+
 // Unit arithmetic tests
 func TestUnitArithmeticMultiplication(t *testing.T) {
 	// Simple multiplication
@@ -492,7 +510,7 @@ func TestUnitSerializationStringRepresentation(t *testing.T) {
 		{Pascal, "1 Pa"},
 		{parsedSpeed, "90 km/h"},
 		{Meter.Div(Second.Pow(2)), "1 m/s^2"},
-		{Scalar(0.5), "0.5 1"},
+		{Scalar(0.5), "0.5"},
 	}
 
 	for _, tt := range tests {
@@ -577,13 +595,15 @@ func TestUnitSerializationJSONMarshalUnmarshalDimensionless(t *testing.T) {
 	// Marshal
 	data, err := json.Marshal(dimensionless)
 	assertError(t, err, false, "json.Marshal")
-	if string(data) != `"0.5 1"` {
-		t.Errorf("json.Marshal(%v) = %s, want %s", dimensionless, data, `"0.5 1"`)
+	if string(data) != `"0.5"` {
+		t.Errorf("json.Marshal(%v) = %s, want %s", dimensionless, data, `"0.5"`)
 	}
 
 	// Unmarshal
 	var parsed Unit
 	err = json.Unmarshal(data, &parsed)
+
+	// The parser should now handle dimensionless values without a unit
 	assertError(t, err, false, "json.Unmarshal")
 	assertUnitEqual(t, parsed, dimensionless, "Unmarshaled unit")
 }
@@ -798,5 +818,35 @@ func TestHertz(t *testing.T) {
 	expectedDimension := Dimension{0, 0, -1, 0, 0, 0, 0}
 	if !reflect.DeepEqual(Hertz.Dimension, expectedDimension) {
 		t.Errorf("Hertz.Dimension = %v, want %v", Hertz.Dimension, expectedDimension)
+	}
+}
+
+// TestVerifyDimension tests the VerifyDimension helper function
+func TestVerifyDimension(t *testing.T) {
+	// Test cases with matching dimensions
+	if !VerifyDimension(Meters(5), Length) {
+		t.Error("VerifyDimension(Meters(5), Length) = false, want true")
+	}
+
+	if !VerifyDimension(Celsius(20), Temperature) {
+		t.Error("VerifyDimension(Celsius(20), Temperature) = false, want true")
+	}
+
+	if !VerifyDimension(Watt, Watt.Dimension) {
+		t.Error("VerifyDimension(Watt, Watt.Dimension) = false, want true")
+	}
+
+	// Test cases with non-matching dimensions
+	if VerifyDimension(Seconds(30), Length) {
+		t.Error("VerifyDimension(Seconds(30), Length) = true, want false")
+	}
+
+	if VerifyDimension(Kilograms(10), Temperature) {
+		t.Error("VerifyDimension(Kilograms(10), Temperature) = true, want false")
+	}
+
+	// Test dimensionless values
+	if !VerifyDimension(Scalar(0.75), Dimensionless) {
+		t.Error("VerifyDimension(Scalar(0.75), Dimensionless) = false, want true")
 	}
 }

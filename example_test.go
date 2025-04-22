@@ -157,7 +157,7 @@ func ExampleScalar() {
 	fmt.Println("Half the mass =", halfMass)
 
 	// Output:
-	// Probability = 0.75 1
+	// Probability = 0.75
 	// Half the mass = 10 kg
 }
 
@@ -247,7 +247,7 @@ func Example_complexConversions() {
 
 	// Output:
 	// Fuel efficiency: 17.5 km/l
-	// Data rate: 1 1
+	// Data rate: 1
 	// Data transferred in 60s at 100 Mbps: 750.0 MB
 }
 
@@ -362,9 +362,30 @@ func Example_binaryPrefixes() {
 	fmt.Println("Total hours:", fmt.Sprintf("%.1f", totalHours.Value))
 
 	// Output:
-	// Hard drive: 2 1
-	// RAM: 16 1
-	// Movie size: 750 1
+	// Hard drive: 2
+	// RAM: 16
+	// Movie size: 750
 	// Movies that fit: 2543.13
 	// Total hours: 3814.7
+}
+
+func ExampleVerifyDimension() {
+	// Parse different sensor readings
+	temperature := si.Celsius(25.3) // Direct creation instead of parsing
+	pressure, _ := si.Parse("1013.25 hPa")
+	voltage, _ := si.Parse("220 V")
+
+	// Verify dimensions are correct
+	fmt.Println("Is temperature:", si.VerifyDimension(temperature, si.Temperature))
+	fmt.Println("Is pressure:", si.VerifyDimension(pressure, si.Pascal.Dimension))
+	fmt.Println("Is voltage:", si.VerifyDimension(voltage, si.Volt.Dimension))
+
+	// Incorrect dimension check
+	fmt.Println("Temperature is Length:", si.VerifyDimension(temperature, si.Length))
+
+	// Output:
+	// Is temperature: true
+	// Is pressure: true
+	// Is voltage: true
+	// Temperature is Length: false
 }
