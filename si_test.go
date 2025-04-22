@@ -168,7 +168,7 @@ func TestComplexExpressions(t *testing.T) {
 			if !tt.skipDimensionCheck {
 				// For tests where we expect specific dimensions, verify them
 				expectedDimension := result.Dimension
-				if !si.VerifyDimension(result, expectedDimension) {
+				if !si.IsDimension(result, expectedDimension) {
 					t.Errorf("Expression dimension = %v, but got something else",
 						result.Dimension)
 				}
@@ -245,13 +245,13 @@ func TestErrorAccumulation(t *testing.T) {
 func TestParsingSensorData(t *testing.T) {
 	// Parse temperature sensor data (using Celsius helper instead of parse with °C)
 	temp := si.Celsius(85.2)
-	if !si.VerifyDimension(temp, si.Temperature) {
+	if !si.IsDimension(temp, si.Temperature) {
 		t.Error("Temperature has incorrect dimension")
 	}
 
 	// Parse pressure sensor data (using Pascals helper with scaling)
 	pressure := si.Pascals(10.3e6) // 10.3 MPa
-	if !si.VerifyDimension(pressure, si.Pascal.Dimension) {
+	if !si.IsDimension(pressure, si.Pascal.Dimension) {
 		t.Error("Pressure has incorrect dimension")
 	}
 
@@ -300,7 +300,7 @@ func TestIndustrialCalculationPower(t *testing.T) {
 	power := pressure.Mul(flowRate)                                  // Power = Pressure × Flow rate
 
 	// Verify dimensions
-	if !si.VerifyDimension(power, si.Watt.Dimension) {
+	if !si.IsDimension(power, si.Watt.Dimension) {
 		t.Error("Power calculation resulted in incorrect dimension")
 	}
 
@@ -320,7 +320,7 @@ func TestHeatExchangeRate(t *testing.T) {
 	heatRate := massFlow.Mul(specificHeat).Mul(tempDiff)
 
 	// Verify dimensions
-	if !si.VerifyDimension(heatRate, si.Watt.Dimension) {
+	if !si.IsDimension(heatRate, si.Watt.Dimension) {
 		t.Error("Heat rate calculation resulted in incorrect dimension")
 	}
 
@@ -368,21 +368,21 @@ func TestDimensionalAnalysis(t *testing.T) {
 	flow := si.Meter.Pow(3).Mul(si.Scalar(5.2 / 1000)).Div(si.Second) // 5.2 L/s
 
 	// Verify dimensions
-	if !si.VerifyDimension(temperature, si.Temperature) {
+	if !si.IsDimension(temperature, si.Temperature) {
 		t.Error("Temperature does not have correct dimension")
 	}
 
-	if !si.VerifyDimension(pressure, si.Pascal.Dimension) {
+	if !si.IsDimension(pressure, si.Pascal.Dimension) {
 		t.Error("Pressure does not have correct dimension")
 	}
 
-	if !si.VerifyDimension(flow, si.Meter.Pow(3).Div(si.Second).Dimension) {
+	if !si.IsDimension(flow, si.Meter.Pow(3).Div(si.Second).Dimension) {
 		t.Error("Flow rate does not have correct dimension")
 	}
 
 	// Test dimensionless quantities
 	efficiency := si.Scalar(0.85)
-	if !si.VerifyDimension(efficiency, si.Dimensionless) {
+	if !si.IsDimension(efficiency, si.Dimensionless) {
 		t.Error("Efficiency should be dimensionless")
 	}
 }
@@ -395,7 +395,7 @@ func TestPumpEfficiencyCalculation(t *testing.T) {
 	efficiency := hydraulicPower.Div(electricalPower)
 
 	// Verify result is dimensionless
-	if !si.VerifyDimension(efficiency, si.Dimensionless) {
+	if !si.IsDimension(efficiency, si.Dimensionless) {
 		t.Error("Efficiency calculation resulted in non-dimensionless value")
 	}
 
@@ -427,7 +427,7 @@ func TestPressureDropCalculation(t *testing.T) {
 	pressureDrop := frictionFactor.Mul(pipeLength).Mul(fluidDensity).Mul(velocitySquared).Div(pipeDiameter.Mul(si.Scalar(2)))
 
 	// Verify dimensions
-	if !si.VerifyDimension(pressureDrop, si.Pascal.Dimension) {
+	if !si.IsDimension(pressureDrop, si.Pascal.Dimension) {
 		t.Error("Pressure drop calculation resulted in incorrect dimension")
 	}
 
@@ -457,7 +457,7 @@ func TestReynoldsNumberCalculation(t *testing.T) {
 	reynolds := density.Mul(velocity).Mul(diameter).Div(viscosity)
 
 	// Verify dimensionless
-	if !si.VerifyDimension(reynolds, si.Dimensionless) {
+	if !si.IsDimension(reynolds, si.Dimensionless) {
 		t.Error("Reynolds number calculation resulted in non-dimensionless value")
 	}
 
@@ -480,7 +480,7 @@ func TestEnergyConsumptionCalculation(t *testing.T) {
 	energy := power.Mul(duration)
 
 	// Verify dimensions (Joules)
-	if !si.VerifyDimension(energy, si.Joule.Dimension) {
+	if !si.IsDimension(energy, si.Joule.Dimension) {
 		t.Error("Energy calculation resulted in incorrect dimension")
 	}
 
@@ -610,7 +610,7 @@ func TestIndustrialTemperatureMonitoring(t *testing.T) {
 	requiredCoolingPower := massFlow.Mul(specificHeat).Mul(tempDifference)
 
 	// Verify dimensions
-	if !si.VerifyDimension(requiredCoolingPower, si.Watt.Dimension) {
+	if !si.IsDimension(requiredCoolingPower, si.Watt.Dimension) {
 		t.Error("Cooling power calculation resulted in incorrect dimension")
 	}
 
@@ -623,5 +623,144 @@ func TestIndustrialTemperatureMonitoring(t *testing.T) {
 	// Since avgTempC < normalMaxTempC, the cooling power should be negative
 	if tempDifferenceC < 0 && requiredCoolingPower.Value >= 0 {
 		t.Error("Required cooling power should be negative for cooling scenario")
+	}
+}
+
+// TestString verifies that the String() method correctly formats units
+func TestString(t *testing.T) {
+	tests := []struct {
+		name     string
+		unit     si.Unit
+		expected string
+	}{
+		// Base SI units
+		{"meter", si.Meters(1.5), "1.5 m"},
+		{"kilogram", si.Kilograms(2.5), "2.5 kg"},
+		{"second", si.Seconds(30), "30 s"},
+		{"ampere", si.Ampere.Mul(si.Scalar(0.5)), "500 mA"},
+		{"kelvin", si.Kelvin.Mul(si.Scalar(273.15)), "273.15 K"},
+		{"mole", si.Mole.Mul(si.Scalar(6.022)), "6.022 mol"},
+
+		// Scaled base units with prefixes
+		{"kilometer", si.Kilometers(5), "5 km"},
+		{"millimeter", si.Meters(0.002), "2 mm"},
+		{"microsecond", si.Second.Mul(si.Scalar(1e-6)), "1 μs"},
+		{"megawatt", si.Watt.Mul(si.Scalar(2e6)), "2 MW"},
+		{"gigahertz", si.Hertz.Mul(si.Scalar(2.4e9)), "2.4 GHz"},
+		{"milliampere", si.Ampere.Mul(si.Scalar(100e-3)), "100 mA"},
+
+		// Derived units
+		{"newton", si.Newton.Mul(si.Scalar(10)), "10 N"},
+		{"joule", si.Joule.Mul(si.Scalar(100)), "100 J"},
+		{"watt", si.Watt.Mul(si.Scalar(50)), "50 W"},
+		{"pascal", si.Pascal.Mul(si.Scalar(101325)), "101.325 kPa"},
+		{"hertz", si.Hertz.Mul(si.Scalar(60)), "60 Hz"},
+		{"volt", si.Volt.Mul(si.Scalar(220)), "220 V"},
+
+		// Compound units
+		{"velocity", si.Meter.Div(si.Second).Mul(si.Scalar(20)), "20 m/s"},
+		{"acceleration", si.Meter.Div(si.Second.Pow(2)).Mul(si.Scalar(9.81)), "9.81 m/s^2"},
+		{"energy_density", si.Joule.Div(si.Meter.Pow(3)).Mul(si.Scalar(5000)), "5 kPa"},
+		{"pressure_grad", si.Pascal.Div(si.Meter).Mul(si.Scalar(10)), "10 kg/m^2·s^2"},
+
+		// Edge cases
+		{"zero", si.Scalar(0), "0"},
+		{"dimensionless", si.Scalar(0.75), "0.75"},
+		{"very_large", si.Meter.Mul(si.Scalar(1e15)), "1000000 Gm"},
+		{"very_small", si.Second.Mul(si.Scalar(1e-15)), "0.001 ps"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.unit.String()
+
+			if result != tt.expected {
+				t.Errorf("String() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestConversionHelpers tests the helper functions for converting between common units
+func TestConversionHelpers(t *testing.T) {
+	// Test temperature conversion helpers
+	temp := si.Celsius(25)
+
+	// Test ToCelsius
+	celsiusValue, err := si.ToCelsius(temp)
+	if err != nil {
+		t.Errorf("ToCelsius failed with error: %v", err)
+	}
+	if math.Abs(celsiusValue-25) > 0.001 {
+		t.Errorf("ToCelsius = %v, want %v", celsiusValue, 25)
+	}
+
+	// Test ToFahrenheit
+	fahrenheitValue, err := si.ToFahrenheit(temp)
+	if err != nil {
+		t.Errorf("ToFahrenheit failed with error: %v", err)
+	}
+	expectedF := float64(25*9/5 + 32)
+	if math.Abs(fahrenheitValue-expectedF) > 0.001 {
+		t.Errorf("ToFahrenheit = %v, want %v", fahrenheitValue, expectedF)
+	}
+
+	// Test error handling for temperature conversions
+	_, err = si.ToCelsius(si.Meter)
+	if err == nil {
+		t.Error("ToCelsius should fail for non-temperature unit")
+	}
+
+	// Test pressure conversion helpers
+	pressure := si.Pascals(101325)
+
+	// Test ToKiloPascals
+	kPaValue, err := si.ToKiloPascals(pressure)
+	if err != nil {
+		t.Errorf("ToKiloPascals failed with error: %v", err)
+	}
+	if math.Abs(kPaValue-101.325) > 0.001 {
+		t.Errorf("ToKiloPascals = %v, want %v", kPaValue, 101.325)
+	}
+
+	// Test error handling for pressure conversions
+	_, err = si.ToKiloPascals(si.Meter)
+	if err == nil {
+		t.Error("ToKiloPascals should fail for non-pressure unit")
+	}
+}
+
+// TestKelvinsFunction tests the Kelvins function for creating temperature units
+func TestKelvinsFunction(t *testing.T) {
+	// Create a temperature in Kelvin
+	tempK := si.Kelvins(300)
+
+	// Verify the dimension
+	if !si.IsDimension(tempK, si.Temperature) {
+		t.Error("Kelvins created temperature with incorrect dimension")
+	}
+
+	// Verify the value
+	if tempK.Value != 300 {
+		t.Errorf("Kelvins value expected 300, got %f", tempK.Value)
+	}
+
+	// Test conversions to Celsius and Fahrenheit
+	c, err := si.ToCelsius(tempK)
+	if err != nil {
+		t.Errorf("Failed to convert to Celsius: %v", err)
+	}
+	expectedC := 300 - 273.15
+	if math.Abs(c-expectedC) > 0.001 {
+		t.Errorf("Celsius conversion incorrect: expected %f C, got %f C", expectedC, c)
+	}
+
+	f, err := si.ToFahrenheit(tempK)
+	if err != nil {
+		t.Errorf("Failed to convert to Fahrenheit: %v", err)
+	}
+	expectedF := (300-273.15)*9/5 + 32
+	if math.Abs(f-expectedF) > 0.001 {
+		t.Errorf("Fahrenheit conversion incorrect: expected %f F, got %f F", expectedF, f)
 	}
 }

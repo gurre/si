@@ -7,14 +7,6 @@ import (
 	"testing"
 )
 
-// assertDimensionEqual checks that two dimensions are equal
-func assertDimensionEqual(t *testing.T, got, want Dimension, name string) {
-	t.Helper()
-	if got != want {
-		t.Errorf("%s = %v, want %v", name, got, want)
-	}
-}
-
 // assertUnitAlmostEqual checks that two units are almost equal (value within epsilon)
 func assertUnitAlmostEqual(t *testing.T, got, want Unit, name string) {
 	t.Helper()
@@ -30,18 +22,6 @@ func assertUnitAlmostEqual(t *testing.T, got, want Unit, name string) {
 	absVal := math.Abs(got.Value - want.Value)
 	if absVal > epsilon {
 		t.Errorf("%s value = %v, want %v (± %v)", name, got.Value, want.Value, epsilon)
-	}
-}
-
-// assertError checks if an error occurs when expected
-func assertError(t *testing.T, err error, wantError bool, name string) {
-	t.Helper()
-	if (err != nil) != wantError {
-		if wantError {
-			t.Errorf("%s: expected error but got nil", name)
-		} else {
-			t.Errorf("%s: unexpected error: %v", name, err)
-		}
 	}
 }
 

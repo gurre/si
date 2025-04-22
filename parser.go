@@ -181,35 +181,3 @@ func ParseComplexUnit(input string, ctx Context) (Unit, error) {
 
 	return EvalAST(ast, ctx)
 }
-
-// preprocessInput prepares a unit expression for tokenization
-func preprocessInput(input string) string {
-	// Add spaces around operators and parentheses for easier tokenization
-	input = addSpacesAroundOperators(input)
-
-	// Remove redundant spaces
-	return normalizeSpaces(input)
-}
-
-// addSpacesAroundOperators adds spaces around operators and parentheses
-func addSpacesAroundOperators(input string) string {
-	input = addSpaceAround(input, "(")
-	input = addSpaceAround(input, ")")
-	input = addSpaceAround(input, "/")
-	input = addSpaceAround(input, "*")
-	input = addSpaceAround(input, "^")
-	return input
-}
-
-// addSpaceAround adds spaces around a specific character
-func addSpaceAround(input, char string) string {
-	return strings.Replace(input, char, " "+char+" ", -1)
-}
-
-// normalizeSpaces removes redundant spaces
-func normalizeSpaces(input string) string {
-	for strings.Contains(input, "  ") {
-		input = strings.Replace(input, "  ", " ", -1)
-	}
-	return strings.TrimSpace(input)
-}

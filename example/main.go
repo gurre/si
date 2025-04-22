@@ -7,12 +7,18 @@ import (
 )
 
 func main() {
-	// Calculate heat exchange rate
-	massFlow := si.Kilograms(2.5).Div(si.Second) // 2.5 kg/s of water
-	specificHeat := si.New(4186, "J/(kg·K)")     // Specific heat of water
-	tempDiff := si.Kelvin.Mul(si.Scalar(15))     // Temperature difference of 15K
-	heatRate := massFlow.Mul(specificHeat).Mul(tempDiff)
+	// Temperature readings from different eras, all with units attached
+	readings := []si.Unit{
+		si.Celsius(22.5),    // 2022 sensor
+		si.Fahrenheit(72.6), // 2023 sensor
+		si.Kelvins(295.7),   // 2024 sensor
+	}
 
-	fmt.Println("Heat exchange rate:", heatRate) // In watts
-
+	// All temperatures converted to a standard unit for analysis
+	for _, temp := range readings {
+		// No need to know which era a reading is from
+		// No need to check field names or metadata
+		c, _ := si.ToCelsius(temp)
+		fmt.Printf("Temperature: %s (%.2f C)\n", temp, c)
+	}
 }

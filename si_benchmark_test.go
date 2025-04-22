@@ -145,8 +145,8 @@ func BenchmarkReynoldsNumber(b *testing.B) {
 	}
 }
 
-// BenchmarkVerifyDimension benchmarks dimension verification
-func BenchmarkVerifyDimension(b *testing.B) {
+// BenchmarkIsDimension benchmarks dimension verification
+func BenchmarkIsDimension(b *testing.B) {
 	units := []struct {
 		unit si.Unit
 		dim  si.Dimension
@@ -161,7 +161,7 @@ func BenchmarkVerifyDimension(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		pair := units[i%len(units)]
-		_ = si.VerifyDimension(pair.unit, pair.dim)
+		_ = si.IsDimension(pair.unit, pair.dim)
 	}
 }
 

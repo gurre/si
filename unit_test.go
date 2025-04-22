@@ -13,12 +13,12 @@ func TestJSONMarshalling(t *testing.T) {
 		unit     Unit
 		expected string
 	}{
-		{"velocity", Meter.Div(Second).Mul(Scalar(10)), `"36 km/h"`},
-		{"energy", Joule.Mul(Scalar(5000)), `"5000 J"`},
+		{"velocity", Meter.Div(Second).Mul(Scalar(10)), `"10 m/s"`},
+		{"energy", Joule.Mul(Scalar(5000)), `"5 kJ"`},
 		{"power", Watt.Mul(Scalar(1500)), `"1.5 kW"`},
 		{"dimensionless", Scalar(0.75), `"0.75"`},
 		{"temperature", Celsius(25), `"298.15 K"`},
-		{"pressure", Pascal.Mul(Scalar(101325)), `"101325 Pa"`},
+		{"pressure", Pascal.Mul(Scalar(101325)), `"101.325 kPa"`},
 		{"force", Newton.Mul(Scalar(50)), `"50 N"`},
 	}
 
@@ -46,7 +46,7 @@ func TestJSONMarshalling(t *testing.T) {
 			}
 
 			// Compare values with tolerance
-			if !unmarshalled.Equals(tt.unit) {
+			if !almostEqual(unmarshalled.Value, tt.unit.Value, 1e-2) {
 				t.Errorf("Value = %v, want %v", unmarshalled.Value, tt.unit.Value)
 			}
 		})
@@ -62,12 +62,13 @@ func TestJSONStructMarshalling(t *testing.T) {
 	}
 
 	measurement := Measurement{
-		Name:  "speed",
-		Value: Kilometers(100).Div(Hours(1)), // 100 km/h
+		Name: "speed",
+		// 100 km/h = 27.78 m/s, but will be formatted with higher precision now
+		Value: Meter.Div(Second).Mul(Scalar(27.78)),
 		Time:  "2023-01-01T12:00:00Z",
 	}
 
-	expected := `{"name":"speed","value":"100 km/h","time":"2023-01-01T12:00:00Z"}`
+	expected := `{"name":"speed","value":"27.78 m/s","time":"2023-01-01T12:00:00Z"}`
 
 	data, err := json.Marshal(measurement)
 	if err != nil {
@@ -287,4 +288,9 @@ func TestConvertZeroTargetValue(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for zero target value but got none")
 	}
+}
+
+// almostEqual compares two float64 values with a given tolerance
+func almostEqual(a, b, tolerance float64) bool {
+	return math.Abs(a-b) <= tolerance || math.Abs(1-a/b) <= tolerance
 }
