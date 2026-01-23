@@ -122,7 +122,14 @@ func parseUnitExprWithAST(input string) (Unit, error) {
 	}
 
 	// Convert to si.Unit
-	siUnit := ConvertToSIUnit(parserUnit).(Unit)
+	result := ConvertToSIUnit(parserUnit)
+	if result == nil {
+		return Unit{}, fmt.Errorf("conversion function not registered")
+	}
+	siUnit, ok := result.(Unit)
+	if !ok {
+		return Unit{}, fmt.Errorf("unexpected type from conversion: %T", result)
+	}
 	return siUnit, nil
 }
 
@@ -182,26 +189,35 @@ func MustParse(input string) Unit {
 }
 
 // New creates a unit with a given value and unit string (e.g. "kg").
-// This is a low-level function used by the helper functions but can be called directly.
+// Returns an error if the symbol cannot be parsed.
 //
 // Example:
 //
-//	mass := New(1.5, "kg")   // 1.5 kg
-//	length := New(100, "cm") // 1 m
-func New(value float64, symbol string) Unit {
+//	mass, err := New(1.5, "kg")   // 1.5 kg
+//	length, err := New(100, "cm") // 1 m
+func New(value float64, symbol string) (Unit, error) {
 	// Special case for grams
 	if symbol == "g" {
-		return Unit{value / 1000, Mass}
+		return Unit{value / 1000, Mass}, nil
 	}
 
 	// First try to parse as a direct unit
 	u, err := ParseUnit(symbol)
 	if err != nil {
-		// Return dimensionless unit as fallback
-		return Scalar(value)
+		return Unit{}, fmt.Errorf("invalid unit symbol %q: %w", symbol, err)
 	}
 
 	u.Value = value
+	return u, nil
+}
+
+// MustNew is like New but panics on error.
+// Use this only when you are certain the symbol is valid.
+func MustNew(value float64, symbol string) Unit {
+	u, err := New(value, symbol)
+	if err != nil {
+		panic(err)
+	}
 	return u
 }
 
@@ -251,7 +267,7 @@ var (
 // These are common derived units defined in terms of the base units.
 var (
 	// Newton is the SI unit of force (1 N = 1 kg·m/s²).
-	Newton = Kilogram.Mul(Meter).Div(Second.Pow(2))
+	Newton = Kilogram.Mul(Meter).Div(Second.MustPow(2))
 
 	// Joule is the SI unit of energy (1 J = 1 N·m).
 	Joule = Newton.Mul(Meter)
@@ -260,7 +276,7 @@ var (
 	Watt = Joule.Div(Second)
 
 	// Pascal is the SI unit of pressure (1 Pa = 1 N/m²).
-	Pascal = Newton.Div(Meter.Pow(2))
+	Pascal = Newton.Div(Meter.MustPow(2))
 
 	// Hertz is the SI unit of frequency (1 Hz = 1/s).
 	Hertz = Unit{1, Dimension{0, 0, -1, 0, 0, 0, 0}}
@@ -282,28 +298,28 @@ var (
 // Example:
 //
 //	duration := Hours(2)  // 2 hours = 7200 seconds
-func Hours(n float64) Unit { return New(n*3600, "s") }
+func Hours(n float64) Unit { return MustNew(n*3600, "s") }
 
 // Minutes creates a time unit in minutes converted to seconds.
 //
 // Example:
 //
 //	duration := Minutes(30)  // 30 minutes = 1800 seconds
-func Minutes(n float64) Unit { return New(n*60, "s") }
+func Minutes(n float64) Unit { return MustNew(n*60, "s") }
 
 // Seconds creates a time unit in seconds.
 //
 // Example:
 //
 //	duration := Seconds(45)  // 45 seconds
-func Seconds(n float64) Unit { return New(n, "s") }
+func Seconds(n float64) Unit { return MustNew(n, "s") }
 
 // Milliseconds creates a time unit in milliseconds converted to seconds.
 //
 // Example:
 //
 //	duration := Milliseconds(500)  // 500 milliseconds = 0.5 seconds
-func Milliseconds(n float64) Unit { return New(n/1000, "s") }
+func Milliseconds(n float64) Unit { return MustNew(n/1000, "s") }
 
 // Length units
 
@@ -312,28 +328,28 @@ func Milliseconds(n float64) Unit { return New(n/1000, "s") }
 // Example:
 //
 //	distance := Kilometers(5)  // 5 kilometers = 5000 meters
-func Kilometers(n float64) Unit { return New(n*1000, "m") }
+func Kilometers(n float64) Unit { return MustNew(n*1000, "m") }
 
 // Meters creates a length unit in meters.
 //
 // Example:
 //
 //	length := Meters(1.8)  // 1.8 meters
-func Meters(n float64) Unit { return New(n, "m") }
+func Meters(n float64) Unit { return MustNew(n, "m") }
 
 // Centimeters creates a length unit in centimeters converted to meters.
 //
 // Example:
 //
 //	length := Centimeters(25)  // 25 centimeters = 0.25 meters
-func Centimeters(n float64) Unit { return New(n/100, "m") }
+func Centimeters(n float64) Unit { return MustNew(n/100, "m") }
 
 // Millimeters creates a length unit in millimeters converted to meters.
 //
 // Example:
 //
 //	length := Millimeters(150)  // 150 millimeters = 0.15 meters
-func Millimeters(n float64) Unit { return New(n/1000, "m") }
+func Millimeters(n float64) Unit { return MustNew(n/1000, "m") }
 
 // Mass units
 
@@ -342,14 +358,14 @@ func Millimeters(n float64) Unit { return New(n/1000, "m") }
 // Example:
 //
 //	mass := Grams(500)  // 500 grams = 0.5 kilograms
-func Grams(n float64) Unit { return New(n/1000, "kg") }
+func Grams(n float64) Unit { return MustNew(n/1000, "kg") }
 
 // Kilograms creates a mass unit in kilograms.
 //
 // Example:
 //
 //	mass := Kilograms(75)  // 75 kilograms
-func Kilograms(n float64) Unit { return New(n, "kg") }
+func Kilograms(n float64) Unit { return MustNew(n, "kg") }
 
 // Temperature units
 
@@ -358,21 +374,21 @@ func Kilograms(n float64) Unit { return New(n, "kg") }
 // Example:
 //
 //	temperature := Celsius(25)  // 25°C = 298.15 K
-func Celsius(n float64) Unit { return New(n+273.15, "K") }
+func Celsius(n float64) Unit { return MustNew(n+273.15, "K") }
 
 // Fahrenheit creates a temperature unit in degrees Fahrenheit converted to kelvins.
 //
 // Example:
 //
 //	temperature := Fahrenheit(77)  // 77°F = 298.15 K
-func Fahrenheit(n float64) Unit { return New((n-32)*5/9+273.15, "K") }
+func Fahrenheit(n float64) Unit { return MustNew((n-32)*5/9+273.15, "K") }
 
 // Kelvins creates a temperature unit in kelvins.
 //
 // Example:
 //
 //	temperature := Kelvins(300)  // 300 K
-func Kelvins(n float64) Unit { return New(n, "K") }
+func Kelvins(n float64) Unit { return MustNew(n, "K") }
 
 // Temperature conversion helpers
 
@@ -411,49 +427,49 @@ func ToFahrenheit(u Unit) (float64, error) {
 // Example:
 //
 //	size := Megabytes(15)  // 15 MB
-func Megabytes(n float64) Unit { return New(n, "MB") }
+func Megabytes(n float64) Unit { return MustNew(n, "MB") }
 
 // Gigabytes creates a data unit in gigabytes.
 //
 // Example:
 //
 //	size := Gigabytes(1.5)  // 1.5 GB
-func Gigabytes(n float64) Unit { return New(n, "GB") }
+func Gigabytes(n float64) Unit { return MustNew(n, "GB") }
 
 // Terabytes creates a data unit in terabytes.
 //
 // Example:
 //
 //	size := Terabytes(2)  // 2 TB
-func Terabytes(n float64) Unit { return New(n, "TB") }
+func Terabytes(n float64) Unit { return MustNew(n, "TB") }
 
 // Kibibytes creates a data unit in kibibytes (1024 bytes).
 //
 // Example:
 //
 //	size := Kibibytes(1024)  // 1024 KiB = 1 MiB
-func Kibibytes(n float64) Unit { return New(n, "KiB") }
+func Kibibytes(n float64) Unit { return MustNew(n, "KiB") }
 
 // Mebibytes creates a data unit in mebibytes (1024 KiB).
 //
 // Example:
 //
 //	size := Mebibytes(2)  // 2 MiB
-func Mebibytes(n float64) Unit { return New(n, "MiB") }
+func Mebibytes(n float64) Unit { return MustNew(n, "MiB") }
 
 // Gibibytes creates a data unit in gibibytes (1024 MiB).
 //
 // Example:
 //
 //	size := Gibibytes(1)  // 1 GiB
-func Gibibytes(n float64) Unit { return New(n, "GiB") }
+func Gibibytes(n float64) Unit { return MustNew(n, "GiB") }
 
 // Tebibytes creates a data unit in tebibytes (1024 GiB).
 //
 // Example:
 //
 //	size := Tebibytes(0.5)  // 0.5 TiB
-func Tebibytes(n float64) Unit { return New(n, "TiB") }
+func Tebibytes(n float64) Unit { return MustNew(n, "TiB") }
 
 // Electrical and physical units
 
@@ -462,56 +478,56 @@ func Tebibytes(n float64) Unit { return New(n, "TiB") }
 // Example:
 //
 //	power := Watts(100)  // 100 W
-func Watts(n float64) Unit { return New(n, "W") }
+func Watts(n float64) Unit { return MustNew(n, "W") }
 
 // Volts creates a voltage unit in volts.
 //
 // Example:
 //
 //	voltage := Volts(220)  // 220 V
-func Volts(n float64) Unit { return New(n, "V") }
+func Volts(n float64) Unit { return MustNew(n, "V") }
 
 // Amperes creates a current unit in amperes.
 //
 // Example:
 //
 //	current := Amperes(0.5)  // 0.5 A
-func Amperes(n float64) Unit { return New(n, "A") }
+func Amperes(n float64) Unit { return MustNew(n, "A") }
 
 // Newtons creates a force unit in newtons.
 //
 // Example:
 //
 //	force := Newtons(10)  // 10 N
-func Newtons(n float64) Unit { return New(n, "N") }
+func Newtons(n float64) Unit { return MustNew(n, "N") }
 
 // Pascals creates a pressure unit in pascals.
 //
 // Example:
 //
 //	pressure := Pascals(101325)  // 101325 Pa = 1 atm
-func Pascals(n float64) Unit { return New(n, "Pa") }
+func Pascals(n float64) Unit { return MustNew(n, "Pa") }
 
 // Psi creates a pressure unit in pounds per square inch (psi) converted to pascals.
 //
 // Example:
 //
 //	pressure := Psi(14.7)  // 14.7 psi = 101356.5 Pa ≈ 1 atm
-func Psi(n float64) Unit { return New(n*6894.76, "Pa") }
+func Psi(n float64) Unit { return MustNew(n*6894.76, "Pa") }
 
 // Joules creates an energy unit in joules.
 //
 // Example:
 //
 //	energy := Joules(4184)  // 4184 J = 1 kcal
-func Joules(n float64) Unit { return New(n, "J") }
+func Joules(n float64) Unit { return MustNew(n, "J") }
 
 // Hertzs creates a frequency unit in hertz.
 //
 // Example:
 //
 //	frequency := Hertzs(60)  // 60 Hz
-func Hertzs(n float64) Unit { return New(n, "Hz") }
+func Hertzs(n float64) Unit { return MustNew(n, "Hz") }
 
 // IsDimension checks if a Unit has the expected Dimension.
 // This is useful for validating that sensor readings have the correct physical quantity.

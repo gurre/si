@@ -174,7 +174,7 @@ func TestConvertCelsiusToKelvin(t *testing.T) {
 // TestConvertNewtonToBaseUnits verifies converting Newton to kg·m/s²
 func TestConvertNewtonToBaseUnits(t *testing.T) {
 	unit := Newton.Mul(Scalar(5))                    // 5N
-	target := Kilogram.Mul(Meter).Div(Second.Pow(2)) // 1 kg·m/s²
+	target := Kilogram.Mul(Meter).Div(Second.MustPow(2)) // 1 kg·m/s²
 	expected := 5.0
 
 	result, err := unit.ConvertTo(target)
@@ -246,8 +246,8 @@ func TestConvertPascalToAtmospheres(t *testing.T) {
 // TestConvertThermalConductance verifies converting thermal conductance units
 func TestConvertThermalConductance(t *testing.T) {
 	// W/m²·K (thermal conductance)
-	unit := Watt.Div(Meter.Pow(2).Mul(Kelvin)).Mul(Scalar(5.678)) // 5.678 W/m²·K
-	target := Watt.Div(Meter.Pow(2).Mul(Kelvin))                  // Base unit
+	unit := Watt.Div(Meter.MustPow(2).Mul(Kelvin)).Mul(Scalar(5.678)) // 5.678 W/m²·K
+	target := Watt.Div(Meter.MustPow(2).Mul(Kelvin))                  // Base unit
 	expected := 5.678
 
 	result, err := unit.ConvertTo(target)
@@ -293,4 +293,78 @@ func TestConvertZeroTargetValue(t *testing.T) {
 // almostEqual compares two float64 values with a given tolerance
 func almostEqual(a, b, tolerance float64) bool {
 	return math.Abs(a-b) <= tolerance || math.Abs(1-a/b) <= tolerance
+}
+
+// TestPowZeroNegativeExponent verifies error when raising zero to negative power
+func TestPowZeroNegativeExponent(t *testing.T) {
+	zero := Scalar(0)
+
+	_, err := zero.Pow(-1)
+	if err == nil {
+		t.Error("Expected error for 0^-1 but got none")
+	}
+
+	_, err = zero.Pow(-2)
+	if err == nil {
+		t.Error("Expected error for 0^-2 but got none")
+	}
+
+	// Positive and zero exponents should work
+	result, err := zero.Pow(0)
+	if err != nil {
+		t.Errorf("Unexpected error for 0^0: %v", err)
+	}
+	if result.Value != 1 {
+		t.Errorf("Expected 0^0 = 1, got %v", result.Value)
+	}
+
+	result, err = zero.Pow(2)
+	if err != nil {
+		t.Errorf("Unexpected error for 0^2: %v", err)
+	}
+	if result.Value != 0 {
+		t.Errorf("Expected 0^2 = 0, got %v", result.Value)
+	}
+}
+
+// TestNewInvalidSymbol verifies error when using invalid unit symbol
+func TestNewInvalidSymbol(t *testing.T) {
+	_, err := New(100, "invalid_unit_xyz")
+	if err == nil {
+		t.Error("Expected error for invalid unit symbol but got none")
+	}
+
+	_, err = New(100, "!!!notaunit")
+	if err == nil {
+		t.Error("Expected error for invalid unit symbol but got none")
+	}
+
+	// Valid symbols should work
+	unit, err := New(100, "m")
+	if err != nil {
+		t.Errorf("Unexpected error for valid symbol 'm': %v", err)
+	}
+	if unit.Value != 100 {
+		t.Errorf("Expected value 100, got %v", unit.Value)
+	}
+}
+
+// TestMustNewPanicsOnInvalidSymbol verifies MustNew panics on invalid input
+func TestMustNewPanicsOnInvalidSymbol(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected MustNew to panic on invalid symbol but it did not")
+		}
+	}()
+	MustNew(100, "invalid_unit_xyz")
+}
+
+// TestMustPowPanicsOnZeroNegative verifies MustPow panics on 0^-n
+func TestMustPowPanicsOnZeroNegative(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected MustPow to panic on 0^-1 but it did not")
+		}
+	}()
+	Scalar(0).MustPow(-1)
 }

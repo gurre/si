@@ -16,14 +16,18 @@ type Tokenizer struct {
 	position int
 }
 
-// NewTokenizer creates a new tokenizer for the input
-func NewTokenizer(input string) *Tokenizer {
-	tokens, _ := tokenizeFully(input)
+// NewTokenizer creates a new tokenizer for the input.
+// Returns an error if the input contains invalid characters.
+func NewTokenizer(input string) (*Tokenizer, error) {
+	tokens, err := tokenizeFully(input)
+	if err != nil {
+		return nil, err
+	}
 	return &Tokenizer{
 		input:    input,
 		tokens:   tokens,
 		position: 0,
-	}
+	}, nil
 }
 
 // Next returns the next token and advances

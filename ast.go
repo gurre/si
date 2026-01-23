@@ -93,7 +93,11 @@ func (n *PowerNode) Eval(ctx Context) (Unit, error) {
 		return Unit{}, fmt.Errorf("error evaluating base: %w", err)
 	}
 
-	return base.Pow(n.Exp), nil
+	result, err := base.Pow(n.Exp)
+	if err != nil {
+		return Unit{}, fmt.Errorf("error in power operation: %w", err)
+	}
+	return result, nil
 }
 
 // String returns a string representation of the power operation

@@ -21,7 +21,7 @@ func main() {
 
 	// Create a circular area (1 inch radius)
 	radius := si.Meter.Mul(si.Scalar(0.0254))     // 1 inch in meters
-	area := radius.Pow(2).Mul(si.Scalar(3.14159)) // πr²
+	area := radius.MustPow(2).Mul(si.Scalar(3.14159)) // πr²
 
 	// Calculate force from pressure (F = P × A)
 	force := pressureDiff.Mul(area)

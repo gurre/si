@@ -197,7 +197,7 @@ func formatUnitDimension(u Unit) (string, error) {
 		return "W/(m*K)", nil // Thermal conductivity
 	} else if Joule.Div(Kilogram.Mul(Kelvin)).Dimension == u.Dimension {
 		return "J/(kg*K)", nil // Specific heat capacity
-	} else if u.Dimension == Joule.Div(Meter.Pow(3)).Dimension {
+	} else if u.Dimension == Joule.Div(Meter.MustPow(3)).Dimension {
 		return "Pa", nil // Energy density is equivalent to pressure
 	}
 
@@ -402,14 +402,6 @@ func formatDimensionFallback(d Dimension) string {
 	}
 
 	return numStr
-}
-
-// abs returns the absolute value of an integer
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
 
 // FormatAST formats an AST node using the provided options

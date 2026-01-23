@@ -57,7 +57,7 @@ func BenchmarkPow(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = u.Pow(2)
+		_ = u.MustPow(2)
 	}
 }
 
@@ -123,7 +123,7 @@ func BenchmarkComplexCalculation(b *testing.B) {
 func BenchmarkHydraulicPower(b *testing.B) {
 	// P = p * Q (pressure * flow rate)
 	p := si.Pascals(5e6)                                      // 5 MPa
-	Q := si.Meter.Pow(3).Mul(si.Scalar(0.001)).Div(si.Second) // 1 L/s
+	Q := si.Meter.MustPow(3).Mul(si.Scalar(0.001)).Div(si.Second) // 1 L/s
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -134,7 +134,7 @@ func BenchmarkHydraulicPower(b *testing.B) {
 // BenchmarkReynoldsNumber benchmarks Reynolds number calculation
 func BenchmarkReynoldsNumber(b *testing.B) {
 	// Re = (ρ * v * D) / μ
-	rho := si.Kilograms(1000).Div(si.Meter.Pow(3))       // Water density
+	rho := si.Kilograms(1000).Div(si.Meter.MustPow(3))       // Water density
 	v := si.Meters(1.5).Div(si.Second)                   // Flow velocity
 	D := si.Meters(0.05)                                 // 50 mm pipe
 	mu := si.Pascal.Mul(si.Second).Mul(si.Scalar(0.001)) // 0.001 Pa·s
@@ -155,7 +155,7 @@ func BenchmarkIsDimension(b *testing.B) {
 		{si.Celsius(25), si.Temperature},
 		{si.Watts(100), si.Watt.Dimension},
 		{si.Meter.Div(si.Second), si.Meter.Div(si.Second).Dimension},
-		{si.Meter.Pow(3).Div(si.Second), si.Meter.Pow(3).Div(si.Second).Dimension},
+		{si.Meter.MustPow(3).Div(si.Second), si.Meter.MustPow(3).Div(si.Second).Dimension},
 	}
 
 	b.ResetTimer()
@@ -181,7 +181,7 @@ func BenchmarkEndToEndFlowCalculation(b *testing.B) {
 
 		// 2. Calculate cross-sectional area: A = π(D/2)²
 		radius := diameter.Mul(si.Scalar(0.5))
-		area := radius.Pow(2).Mul(si.Scalar(math.Pi))
+		area := radius.MustPow(2).Mul(si.Scalar(math.Pi))
 
 		// 3. Calculate volume flow rate: Q = A * v
 		flowRate := area.Mul(velocity)
@@ -273,5 +273,121 @@ func BenchmarkPressureConversion(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Failed to convert pressure: %v", err)
 		}
+	}
+}
+
+// BenchmarkNew benchmarks the New function with error handling
+func BenchmarkNew(b *testing.B) {
+	symbols := []string{"m", "kg", "s", "K", "W", "Pa", "N", "J"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sym := symbols[i%len(symbols)]
+		_, err := si.New(100, sym)
+		if err != nil {
+			b.Fatalf("Failed to create unit: %v", err)
+		}
+	}
+}
+
+// BenchmarkMustNew benchmarks the MustNew function (panic on error)
+func BenchmarkMustNew(b *testing.B) {
+	symbols := []string{"m", "kg", "s", "K", "W", "Pa", "N", "J"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sym := symbols[i%len(symbols)]
+		_ = si.MustNew(100, sym)
+	}
+}
+
+// BenchmarkPowWithError benchmarks Pow with error handling
+func BenchmarkPowWithError(b *testing.B) {
+	u := si.Meter
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := u.Pow(2)
+		if err != nil {
+			b.Fatalf("Failed to power unit: %v", err)
+		}
+	}
+}
+
+// BenchmarkEquals benchmarks the Equals comparison method
+func BenchmarkEquals(b *testing.B) {
+	u1 := si.Meters(1.0)
+	u2 := si.Kilometers(0.001)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u1.Equals(u2)
+	}
+}
+
+// BenchmarkCompare benchmarks the Compare method
+func BenchmarkCompare(b *testing.B) {
+	u1 := si.Meters(1.0)
+	u2 := si.Meters(1.5)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = u1.Compare(u2)
+	}
+}
+
+// Memory allocation benchmarks
+
+// BenchmarkParseAllocs benchmarks Parse memory allocations
+func BenchmarkParseAllocs(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = si.Parse("100 km/h")
+	}
+}
+
+// BenchmarkMulAllocs benchmarks Mul memory allocations
+func BenchmarkMulAllocs(b *testing.B) {
+	u1 := si.Meter
+	u2 := si.Second
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u1.Mul(u2)
+	}
+}
+
+// BenchmarkDivAllocs benchmarks Div memory allocations
+func BenchmarkDivAllocs(b *testing.B) {
+	u1 := si.Meter
+	u2 := si.Second
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u1.Div(u2)
+	}
+}
+
+// BenchmarkStringAllocs benchmarks String memory allocations
+func BenchmarkStringAllocs(b *testing.B) {
+	u := si.Meters(1500)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u.String()
+	}
+}
+
+// BenchmarkJSONMarshalAllocs benchmarks JSON marshal memory allocations
+func BenchmarkJSONMarshalAllocs(b *testing.B) {
+	u := si.Meters(1500)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = u.MarshalJSON()
 	}
 }

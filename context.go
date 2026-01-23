@@ -53,7 +53,7 @@ func (ctx *StandardContext) registerBaseUnits() {
 // registerDerivedUnits registers common SI derived units
 func (ctx *StandardContext) registerDerivedUnits() {
 	// Newton: kg·m/s²
-	newton := ctx.baseUnits["kg"].Mul(ctx.baseUnits["m"]).Div(ctx.baseUnits["s"].Pow(2))
+	newton := ctx.baseUnits["kg"].Mul(ctx.baseUnits["m"]).Div(ctx.baseUnits["s"].MustPow(2))
 	ctx.derivedUnits["N"] = newton
 
 	// Joule: N·m
@@ -65,7 +65,7 @@ func (ctx *StandardContext) registerDerivedUnits() {
 	ctx.derivedUnits["W"] = watt
 
 	// Pascal: N/m²
-	pascal := newton.Div(ctx.baseUnits["m"].Pow(2))
+	pascal := newton.Div(ctx.baseUnits["m"].MustPow(2))
 	ctx.derivedUnits["Pa"] = pascal
 
 	// PSI: Pound per square inch (1 psi = 6894.76 Pa)

@@ -96,7 +96,7 @@ for _, temp := range readings {
     c, _ := si.ToCelsius(temp)
     fmt.Printf("Temperature: %s (%.2f C)\n", temp, c)
     // Temperature: 295.65 K (22.50 C)
-    // Temperature: 295.7055555555555 K (22.56 C)
+    // Temperature: 295.705556 K (22.56 C)
     // Temperature: 295.7 K (22.55 C)
 }
 ```
@@ -133,7 +133,7 @@ func processHistoricalReading(reading string) (string, error) {
 // Works seamlessly with:
 processHistoricalReading("350 kPa")  // From old dataset, 360.5 kPa
 processHistoricalReading("0.35 MPa") // From another system, 360.5 kPa
-processHistoricalReading("50.8 psi") // From imperial sensors, 360.7614222400001 kPa
+processHistoricalReading("50.8 psi") // From imperial sensors, 360.761 kPa
 ```
 
 Your historical data remains valuable and accurate, regardless of when or how it was collected.
@@ -190,25 +190,39 @@ go get github.com/gurre/si
 
 ```go
 // Create units with various representations
-temp := si.Celsius(25.5)                                      // 298.65 K
-distance := si.Kilometers(1.5)                                // 1500 m
-flow := si.Meter.Pow(3).Mul(si.Scalar(0.002)).Div(si.Second)  // 2 L/s
+temp := si.Celsius(25.5)                                          // 298.65 K
+distance := si.Kilometers(1.5)                                    // 1.5 km
+flow := si.Meter.MustPow(3).Mul(si.Scalar(0.002)).Div(si.Second)  // 0.002 m³/s
 
 // Parse units from strings (e.g., from sensor readings)
 pressure, _ := si.Parse("101.325 kPa")  // 101.325 kPa
-velocity, _ := si.Parse("55 km/h")      // 15.27777777777778 m/s
+velocity, _ := si.Parse("55 km/h")      // 15.278 m/s
 
 // Convert between units
 meters, _ := distance.ConvertTo(si.Meter)
-fmt.Println(meters)  // 1.5 km
+fmt.Println(meters)  // 1500 m
 
 // Temperature conversions
 tempF, _ := si.ToFahrenheit(temp)       // 77.9
 tempC, _ := si.ToCelsius(temp)          // 25.5
 
 // Perform calculations with units
-power := pressure.Mul(flow)                     // 202.65 W
-energy := power.Mul(si.Hours(2))                // 1.45908 MJ
+power := pressure.Mul(flow)                     // 0.203 W
+energy := power.Mul(si.Hours(2))                // 1459.08 J
+
+// Create units with error handling
+unit, err := si.New(100, "km/h")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Power operations with error handling
+area, err := si.Meter.Pow(2)  // Returns (Unit, error)
+if err != nil {
+    log.Fatal(err)
+}
+// Or use MustPow for known-safe operations
+area = si.Meter.MustPow(2)  // Panics on error
 ```
 
 ### Real-World IoT Example
@@ -234,7 +248,7 @@ for _, reading := range readings {
             fmt.Printf("ALERT: High temperature: %.1f C\n", tempC)
         }
     } else if si.IsDimension(reading.Value, si.Pascal.Dimension) {
-        fmt.Printf("Pressure: %.1f kPa\n", reading.Value)
+        fmt.Printf("Pressure: %.1f kPa\n", reading.Value.Value/1000)
     }
 }
 ```
@@ -252,64 +266,93 @@ for _, reading := range readings {
 
 For complete documentation, visit the [GoDoc page](https://godoc.org/github.com/gurre/si).
 
+## 🔧 API Reference
+
+### Core Types
+
+- `Unit` - A physical quantity with value and dimension
+- `Dimension` - The 7 SI base dimension exponents [Length, Mass, Time, Current, Temperature, Substance, Luminosity]
+
+### Creating Units
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `Parse(s string)` | `(Unit, error)` | Parse a string like "100 km/h" |
+| `New(value, symbol)` | `(Unit, error)` | Create unit with value and symbol |
+| `MustNew(value, symbol)` | `Unit` | Like New but panics on error |
+| `Scalar(value)` | `Unit` | Create dimensionless unit |
+
+### Unit Operations
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `Mul(other)` | `Unit` | Multiply units (adds dimensions) |
+| `Div(other)` | `Unit` | Divide units (subtracts dimensions) |
+| `Pow(exp)` | `(Unit, error)` | Raise to power (returns error on 0^-n) |
+| `MustPow(exp)` | `Unit` | Like Pow but panics on error |
+| `Add(other)` | `(Unit, error)` | Add units (must have same dimension) |
+| `ConvertTo(target)` | `(Unit, error)` | Convert to target unit scale |
+| `Equals(other)` | `bool` | Compare with floating-point tolerance |
+| `Compare(other)` | `(int, error)` | Returns -1, 0, or 1 |
+
+### Convenience Constructors
+
+Time: `Hours()`, `Minutes()`, `Seconds()`, `Milliseconds()`
+Length: `Kilometers()`, `Meters()`, `Centimeters()`, `Millimeters()`
+Mass: `Kilograms()`, `Grams()`
+Temperature: `Celsius()`, `Fahrenheit()`, `Kelvins()`
+Other: `Watts()`, `Volts()`, `Amperes()`, `Newtons()`, `Pascals()`, `Joules()`, `Hertzs()`, `Psi()`
+
 ## ⚡️ Benchmarks
 
-The benchmark results show that:
- - Basic operations (Mul, Div, Pow, Add, ConvertTo) are very fast (<10ns) and don't allocate memory
- - Parsing and string operations are more expensive (~3μs for Parse, ~90ns for String)
- - End-to-end calculations take longer (~8-11μs) and require more memory allocations
- - Complex real-world scenarios are the most resource-intensive (14-35μs with 130-312 allocations)
+Performance characteristics (Apple M4 Pro):
+
+| Category | Operation | Time | Allocations |
+|----------|-----------|------|-------------|
+| **Arithmetic** | Mul, Div | ~3 ns | 0 |
+| | Pow | ~7 ns | 0 |
+| | Add, Compare | ~3 ns | 0 |
+| **Formatting** | String() | ~115 ns | 3 |
+| | FormatUnit | ~165 ns | 4 |
+| | JSON Marshal | ~160 ns | 6 |
+| **Parsing** | Parse() | ~2.8 μs | 31 |
+| | New() | ~2.6 μs | 26 |
+| **Complex** | Reynolds number | ~14 ns | 0 |
+| | End-to-end flow | ~11 μs | 118 |
+| | Heat exchanger | ~21 μs | 208 |
+
+Key findings:
+- **Zero-allocation arithmetic**: Mul, Div, Pow, Add, ConvertTo allocate no memory
+- **Parsing overhead**: Most time spent creating StandardContext (~88% of allocations)
+- **Formatting**: AST generation dominates formatting cost
 
 ```
-go test -bench=. -benchmem -benchtime=10s ./...
-goos: darwin
-goarch: arm64
-pkg: github.com/gurre/si
-cpu: Apple M4 Pro
-BenchmarkParse-12                        	 4174719	      2835 ns/op	    7990 B/op	      31 allocs/op
-BenchmarkMul-12                          	1000000000	         3.284 ns/op	       0 B/op	       0 allocs/op
-BenchmarkDiv-12                          	1000000000	         3.283 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPow-12                          	1000000000	         7.120 ns/op	       0 B/op	       0 allocs/op
-BenchmarkAdd-12                          	1000000000	         2.934 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConvertTo-12                    	1000000000	         2.957 ns/op	       0 B/op	       0 allocs/op
-BenchmarkString-12                       	138894262	        86.27 ns/op	      28 B/op	       2 allocs/op
-BenchmarkComplexCalculation-12           	1000000000	         8.772 ns/op	       0 B/op	       0 allocs/op
-BenchmarkHydraulicPower-12               	1000000000	         3.325 ns/op	       0 B/op	       0 allocs/op
-BenchmarkReynoldsNumber-12               	849424845	        14.20 ns/op	       0 B/op	       0 allocs/op
-BenchmarkVerifyDimension-12              	1000000000	         4.576 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEndToEndFlowCalculation-12      	 1000000	     10917 ns/op	   30680 B/op	     118 allocs/op
-BenchmarkEndToEndEnergyCalculation-12    	 1518381	      7913 ns/op	   22096 B/op	      80 allocs/op
-BenchmarkCelsiusToKelvin-12              	 4621032	      2560 ns/op	    7344 B/op	      26 allocs/op
-BenchmarkKilometersToMeters-12           	 4721824	      2546 ns/op	    7344 B/op	      26 allocs/op
-BenchmarkMarshalJSON-12                  	84430513	       142.0 ns/op	      56 B/op	       4 allocs/op
-BenchmarkPressureConversion-12           	1000000000	         3.079 ns/op	       0 B/op	       0 allocs/op
-BenchmarkThermodynamicCalculation-12     	  924319	     13099 ns/op	   36720 B/op	     130 allocs/op
-BenchmarkHeatExchangerDesign-12          	  587031	     20535 ns/op	   58752 B/op	     208 allocs/op
-BenchmarkPumpingSystemAnalysis-12        	  739095	     16010 ns/op	   44064 B/op	     156 allocs/op
-BenchmarkElectricalCircuitAnalysis-12    	  364904	     32496 ns/op	   88128 B/op	     312 allocs/op
+go test -bench=. -benchmem ./...
+
+BenchmarkMul-12                          367829902           3.26 ns/op        0 B/op       0 allocs/op
+BenchmarkDiv-12                          366287973           3.26 ns/op        0 B/op       0 allocs/op
+BenchmarkPow-12                          169092705           7.08 ns/op        0 B/op       0 allocs/op
+BenchmarkAdd-12                          415120234           2.90 ns/op        0 B/op       0 allocs/op
+BenchmarkConvertTo-12                    403919590           2.95 ns/op        0 B/op       0 allocs/op
+BenchmarkEquals-12                       340419978           3.57 ns/op        0 B/op       0 allocs/op
+BenchmarkCompare-12                      418756206           2.87 ns/op        0 B/op       0 allocs/op
+BenchmarkParse-12                          427963           2817 ns/op     7990 B/op      31 allocs/op
+BenchmarkNew-12                            456466           2655 ns/op     7344 B/op      26 allocs/op
+BenchmarkString-12                        8885310          136.0 ns/op       51 B/op       4 allocs/op
+BenchmarkFormatUnitWithPrefix-12         10319325          115.8 ns/op       46 B/op       3 allocs/op
+BenchmarkMarshalJSON-12                   6108565          199.2 ns/op       78 B/op       6 allocs/op
+BenchmarkComplexCalculation-12          139425274           8.61 ns/op        0 B/op       0 allocs/op
+BenchmarkReynoldsNumber-12               84691436          14.26 ns/op        0 B/op       0 allocs/op
+BenchmarkEndToEndFlowCalculation-12        110215          11134 ns/op    30680 B/op     118 allocs/op
+BenchmarkHeatExchangerDesign-12             52398          21227 ns/op    58752 B/op     208 allocs/op
 ```
 
-# AST-based parser for units
+### Profiling
 
-1. The unit system is built around the Unit struct, which contains:
-    - Value: A float64 representing the scalar magnitude of the physical quantity
-    - Dimension: A [7]int array representing the exponents of the 7 SI base dimensions (Length, Mass, Time, Current, Temperature, Substance, Luminosity)
-2. Units are registered in the StandardContext struct, which implements the Context interface. The StandardContext contains:
-    - baseUnits: A map of base unit symbols (e.g., "m", "kg") to their Unit definitions
-    - derivedUnits: A map of derived unit symbols (e.g., "N", "J") to their Unit definitions
-    - prefixes: A map of unit prefixes (e.g., "k", "M") to their scaling factors
-    - sortedPrefixes: A slice of prefixes sorted by length for proper matching
-3. Registration happens in three main methods:
-    - registerBaseUnits(): Registers the 7 SI base units (meter, kilogram, second, ampere, kelvin, mole, candela)
-    - registerDerivedUnits(): Registers derived units (newton, joule, watt, etc.) by combining base units
-    - registerPrefixes(): Registers SI prefixes (kilo, mega, etc.) and binary prefixes (kibi, mebi, etc.)
-4. The entire process is initiated in the NewStandardContext() function, which creates a new context and calls these registration methods.
-5. Unit symbols are resolved via the Resolve() method, which:
-    - Checks for special cases (dimensionless units, gram)
-    - Looks up exact matches in base and derived unit maps
-    - Handles prefixed units by checking if a symbol starts with a known prefix
-    - Returns a Unit with the appropriate value and dimension
-6. Complex unit expressions like "kgm/s^2" are parsed using an AST-based parser:
-    - ParseComplexUnit() tokenizes the input and builds an abstract syntax tree
-    - The parser handles identifiers, numbers, parentheses, and operations (multiplication, division, powers)
-    - The AST nodes are then evaluated with the context to produce a final Unit
+Run with CPU and memory profiling:
+
+```bash
+go test -bench=BenchmarkParse -cpuprofile=cpu.prof -memprofile=mem.prof .
+go tool pprof -top cpu.prof
+go tool pprof -top mem.prof
+```

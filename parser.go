@@ -12,16 +12,21 @@ type Parser struct {
 	err       error
 }
 
-// NewParser creates a new parser for the input
-func NewParser(input string) *Parser {
+// NewParser creates a new parser for the input.
+// Returns an error if tokenization fails.
+func NewParser(input string) (*Parser, error) {
 	// Normalize middle dot to asterisk for consistency
 	input = strings.Replace(input, "·", "*", -1)
 
 	// Preprocess for better tokenizing of operators
 	// Add spaces around operators and parentheses for easier tokenization
-	return &Parser{
-		tokenizer: NewTokenizer(input),
+	tokenizer, err := NewTokenizer(input)
+	if err != nil {
+		return nil, err
 	}
+	return &Parser{
+		tokenizer: tokenizer,
+	}, nil
 }
 
 // Parse parses a unit expression and returns the AST
@@ -157,7 +162,10 @@ func ParseUnitAST(input string) (Node, error) {
 	// Replace middle dot with asterisk for consistency
 	input = strings.Replace(input, "·", "*", -1)
 
-	parser := NewParser(input)
+	parser, err := NewParser(input)
+	if err != nil {
+		return nil, err
+	}
 	return parser.Parse()
 }
 

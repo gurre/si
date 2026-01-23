@@ -2,6 +2,7 @@ package si_test
 
 import (
 	"math"
+	"strconv"
 	"testing"
 
 	"github.com/gurre/si"
@@ -71,7 +72,7 @@ func TestParse(t *testing.T) {
 		{"simple value with unit", "10 m", si.Unit{10, si.Length}, false},
 		{"decimal value with unit", "3.14 kg", si.Unit{3.14, si.Mass}, false},
 		{"scientific notation with unit", "1.2e3 W", si.Unit{1200, si.Watt.Dimension}, false},
-		{"compound unit", "9.8 m/s^2", si.Unit{9.8, si.Meter.Div(si.Second.Pow(2)).Dimension}, false},
+		{"compound unit", "9.8 m/s^2", si.Unit{9.8, si.Meter.Div(si.Second.MustPow(2)).Dimension}, false},
 		{"unit with prefix", "100 km/h", si.Unit{100000.0 / 3600.0, si.Meter.Div(si.Second).Dimension}, false},
 		{"dimensionless without unit", "0.5", si.Scalar(0.5), false},
 		{"scientific notation without unit", "1.2e3", si.Scalar(1200), false},
@@ -275,10 +276,10 @@ func TestUnitConversion(t *testing.T) {
 	// Create flow rate in cubic meters per second (2 L/s = 0.002 m³/s)
 	// Since the lib doesn't directly support L/min, we'll use cubic meters per second
 	flowM3S := 0.002 // m³/s equivalent to 120 L/min
-	flowRate := si.Meter.Pow(3).Mul(si.Scalar(flowM3S)).Div(si.Second)
+	flowRate := si.Meter.MustPow(3).Mul(si.Scalar(flowM3S)).Div(si.Second)
 
 	// Verify the dimension is correct for volume flow rate
-	expectedDimension := si.Meter.Pow(3).Div(si.Second).Dimension
+	expectedDimension := si.Meter.MustPow(3).Div(si.Second).Dimension
 	if flowRate.Dimension != expectedDimension {
 		t.Error("Flow rate has incorrect dimension")
 	}
@@ -296,7 +297,7 @@ func TestUnitConversion(t *testing.T) {
 func TestIndustrialCalculationPower(t *testing.T) {
 	// Calculate power from pressure and flow rate (P = p × Q)
 	pressure := si.Pascals(5e6)                                      // 5 MPa
-	flowRate := si.Meter.Pow(3).Mul(si.Scalar(0.001)).Div(si.Second) // 1 L/s
+	flowRate := si.Meter.MustPow(3).Mul(si.Scalar(0.001)).Div(si.Second) // 1 L/s
 	power := pressure.Mul(flowRate)                                  // Power = Pressure × Flow rate
 
 	// Verify dimensions
@@ -365,7 +366,7 @@ func TestDimensionalAnalysis(t *testing.T) {
 	// Create different physical quantities
 	temperature := si.Celsius(32.5)
 	pressure := si.Pascals(101.3e3)                                   // 101.3 kPa
-	flow := si.Meter.Pow(3).Mul(si.Scalar(5.2 / 1000)).Div(si.Second) // 5.2 L/s
+	flow := si.Meter.MustPow(3).Mul(si.Scalar(5.2 / 1000)).Div(si.Second) // 5.2 L/s
 
 	// Verify dimensions
 	if !si.IsDimension(temperature, si.Temperature) {
@@ -376,7 +377,7 @@ func TestDimensionalAnalysis(t *testing.T) {
 		t.Error("Pressure does not have correct dimension")
 	}
 
-	if !si.IsDimension(flow, si.Meter.Pow(3).Div(si.Second).Dimension) {
+	if !si.IsDimension(flow, si.Meter.MustPow(3).Div(si.Second).Dimension) {
 		t.Error("Flow rate does not have correct dimension")
 	}
 
@@ -418,7 +419,7 @@ func TestPressureDropCalculation(t *testing.T) {
 
 	frictionFactor := si.Scalar(0.02)                       // Dimensionless friction factor
 	pipeLength := si.Meters(10)                             // 10 m pipe
-	fluidDensity := si.Kilograms(1000).Div(si.Meter.Pow(3)) // 1000 kg/m³ (water)
+	fluidDensity := si.Kilograms(1000).Div(si.Meter.MustPow(3)) // 1000 kg/m³ (water)
 	fluidVelocity := si.Meters(2).Div(si.Second)            // 2 m/s velocity
 	pipeDiameter := si.Meters(0.1)                          // 100 mm diameter
 
@@ -447,7 +448,7 @@ func TestReynoldsNumberCalculation(t *testing.T) {
 	// D = pipe diameter
 	// μ = dynamic viscosity
 
-	density := si.Kilograms(1000).Div(si.Meter.Pow(3)) // Water density
+	density := si.Kilograms(1000).Div(si.Meter.MustPow(3)) // Water density
 	velocity := si.Meters(1.5).Div(si.Second)          // Flow velocity
 	diameter := si.Meters(0.05)                        // 50 mm pipe
 	viscosity := si.Pascal.Mul(si.Second)              // Water viscosity (1 Pa·s = 1 kg/(m·s))
@@ -659,8 +660,8 @@ func TestString(t *testing.T) {
 
 		// Compound units
 		{"velocity", si.Meter.Div(si.Second).Mul(si.Scalar(20)), "20 m/s"},
-		{"acceleration", si.Meter.Div(si.Second.Pow(2)).Mul(si.Scalar(9.81)), "9.81 m/s^2"},
-		{"energy_density", si.Joule.Div(si.Meter.Pow(3)).Mul(si.Scalar(5000)), "5 kPa"},
+		{"acceleration", si.Meter.Div(si.Second.MustPow(2)).Mul(si.Scalar(9.81)), "9.81 m/s^2"},
+		{"energy_density", si.Joule.Div(si.Meter.MustPow(3)).Mul(si.Scalar(5000)), "5 kPa"},
 		{"pressure_grad", si.Pascal.Div(si.Meter).Mul(si.Scalar(10)), "10 kg/(s^2*m^2)"},
 
 		// Edge cases
@@ -806,5 +807,185 @@ func TestPsiUnit(t *testing.T) {
 	if math.Abs(kPa-expectedKPa) > 0.01 {
 		t.Errorf("PSI to kPa conversion incorrect: got %f kPa, expected %f kPa",
 			kPa, expectedKPa)
+	}
+}
+
+// TestParseOperateFormat tests the end-to-end lifecycle of SI units:
+// 1. Parse a unit expression
+// 2. Perform operations
+// 3. Format the result back to a string
+func TestParseOperateFormat(t *testing.T) {
+	tests := []struct {
+		name           string
+		input1         string
+		input2         string
+		operation      string
+		expectedResult string
+	}{
+		{
+			name:           "addition of lengths",
+			input1:         "5 m",
+			input2:         "10 cm",
+			operation:      "add",
+			expectedResult: "5.1 m",
+		},
+		{
+			name:           "subtraction of lengths",
+			input1:         "5 m",
+			input2:         "10 cm",
+			operation:      "subtract",
+			expectedResult: "4.9 m",
+		},
+		{
+			name:           "multiplication of length and force",
+			input1:         "2 m",
+			input2:         "5 N",
+			operation:      "multiply",
+			expectedResult: "10 J", // Newton-meter = Joule
+		},
+		{
+			name:           "division of energy by time",
+			input1:         "100 J",
+			input2:         "25 s",
+			operation:      "divide",
+			expectedResult: "4 W", // Joule/second = Watt
+		},
+		{
+			name:           "power operation on length",
+			input1:         "2 m",
+			input2:         "3",
+			operation:      "power",
+			expectedResult: "8 m^3",
+		},
+		{
+			name:           "velocity calculation",
+			input1:         "100 m",
+			input2:         "25 s",
+			operation:      "divide",
+			expectedResult: "4 m/s",
+		},
+		{
+			name:           "pressure conversion",
+			input1:         "101.325 kPa",
+			input2:         "",
+			operation:      "identity",
+			expectedResult: "101.325 kPa",
+		},
+		{
+			name:           "complex units multiplication",
+			input1:         "5 kg*m/s^2",
+			input2:         "2 m",
+			operation:      "multiply",
+			expectedResult: "10 J", // Newton*meter = Joule
+		},
+		{
+			name:           "complex units division",
+			input1:         "50 m^3",
+			input2:         "2 s",
+			operation:      "divide",
+			expectedResult: "25 m^3/s", // Volume flow rate
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Step 1: Parse the input units
+			unit1, err := si.Parse(tt.input1)
+			if err != nil {
+				t.Fatalf("Failed to parse first input %q: %v", tt.input1, err)
+			}
+
+			var unit2 si.Unit
+			var result si.Unit
+
+			// Step 2: Perform the operation
+			switch tt.operation {
+			case "add":
+				unit2, err = si.Parse(tt.input2)
+				if err != nil {
+					t.Fatalf("Failed to parse second input %q: %v", tt.input2, err)
+				}
+				result, err = unit1.Add(unit2)
+				if err != nil {
+					t.Fatalf("Failed to add units: %v", err)
+				}
+			case "subtract":
+				unit2, err = si.Parse(tt.input2)
+				if err != nil {
+					t.Fatalf("Failed to parse second input %q: %v", tt.input2, err)
+				}
+				// si.Unit doesn't have a Sub method, use Add with negative value
+				negUnit := si.Unit{Value: -unit2.Value, Dimension: unit2.Dimension}
+				result, err = unit1.Add(negUnit)
+				if err != nil {
+					t.Fatalf("Failed to subtract units: %v", err)
+				}
+			case "multiply":
+				unit2, err = si.Parse(tt.input2)
+				if err != nil {
+					t.Fatalf("Failed to parse second input %q: %v", tt.input2, err)
+				}
+				result = unit1.Mul(unit2)
+			case "divide":
+				unit2, err = si.Parse(tt.input2)
+				if err != nil {
+					t.Fatalf("Failed to parse second input %q: %v", tt.input2, err)
+				}
+				result = unit1.Div(unit2)
+			case "power":
+				exp, err := strconv.Atoi(tt.input2)
+				if err != nil {
+					t.Fatalf("Failed to parse exponent %q: %v", tt.input2, err)
+				}
+				result = unit1.MustPow(exp)
+			case "identity":
+				result = unit1
+			default:
+				t.Fatalf("Unknown operation: %s", tt.operation)
+			}
+
+			// Step 3: Format the result back to a string
+			resultStr := result.String()
+
+			// Compare with expected result
+			if resultStr != tt.expectedResult {
+				t.Errorf("Result mismatch: got %q, want %q", resultStr, tt.expectedResult)
+
+				// Additional debugging information
+				t.Logf("Result unit value: %v", result.Value)
+				t.Logf("Result unit dimension: %v", result.Dimension)
+
+				// Parse the expected result for comparison
+				expectedUnit, err := si.Parse(tt.expectedResult)
+				if err == nil {
+					t.Logf("Expected unit value: %v", expectedUnit.Value)
+					t.Logf("Expected unit dimension: %v", expectedUnit.Dimension)
+
+					// Check if dimensions match but values don't
+					if result.Dimension == expectedUnit.Dimension &&
+						math.Abs(result.Value-expectedUnit.Value) > 0.001 {
+						t.Logf("Dimensions match but values differ")
+					}
+				}
+			}
+
+			// Step 4: Parse the formatted string back to a unit (round-trip test)
+			parsedResult, err := si.Parse(resultStr)
+			if err != nil {
+				t.Fatalf("Failed to parse result string %q: %v", resultStr, err)
+			}
+
+			// Verify the parsed result has the same dimension as the original result
+			if parsedResult.Dimension != result.Dimension {
+				t.Errorf("Dimension mismatch after round-trip: got %v, want %v",
+					parsedResult.Dimension, result.Dimension)
+			}
+
+			// Verify the parsed result has approximately the same value
+			if math.Abs(parsedResult.Value-result.Value) > 0.001 {
+				t.Errorf("Value mismatch after round-trip: got %v, want %v",
+					parsedResult.Value, result.Value)
+			}
+		})
 	}
 }

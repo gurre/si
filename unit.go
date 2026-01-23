@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+// floatEpsilon is the tolerance for floating-point comparisons.
+// This value (1e-12) provides approximately 12 decimal digits of precision,
+// which is appropriate for most SI unit calculations while avoiding
+// false positives from floating-point rounding errors.
+const floatEpsilon = 1e-12
+
 // Dimension represents the exponents of the 7 SI base units.
 // The index positions are: [Length, Mass, Time, Current, Temperature, Substance, Luminosity].
 // For example, a meter is Dimension{1,0,0,0,0,0,0} and a second is Dimension{0,0,1,0,0,0,0}.
@@ -80,17 +86,17 @@ func (u Unit) Div(v Unit) Unit {
 // Pow raises a unit to a power
 // This is used for operations like squaring distances or taking the square root of an area.
 // All dimension exponents are multiplied by the given power.
+// Returns an error if raising zero to a negative power.
 //
 // Example:
 //
 //	// Calculate area from length: A = l²
 //	length := Meters(4)
-//	area := length.Pow(2)  // 16 m²
-//
-//	// Calculate radius from volume: r = ∛(3V/4π)
-//	volumeTerm := Meter.Pow(3).Mul(Scalar(3.0/4.0/math.Pi))
-//	radius := volumeTerm.Pow(1.0/3.0)
-func (u Unit) Pow(exp int) Unit {
+//	area, _ := length.Pow(2)  // 16 m²
+func (u Unit) Pow(exp int) (Unit, error) {
+	if u.Value == 0 && exp < 0 {
+		return Unit{}, errors.New("cannot raise zero to negative power")
+	}
 	var dim Dimension
 	for i := range dim {
 		dim[i] = u.Dimension[i] * exp
@@ -98,7 +104,17 @@ func (u Unit) Pow(exp int) Unit {
 	return Unit{
 		Value:     pow(u.Value, exp),
 		Dimension: dim,
+	}, nil
+}
+
+// MustPow is like Pow but panics on error.
+// Use this only when you are certain the operation will not fail.
+func (u Unit) MustPow(exp int) Unit {
+	result, err := u.Pow(exp)
+	if err != nil {
+		panic(err)
 	}
+	return result
 }
 
 // pow is a helper function to calculate x^n for integer exponents
@@ -131,7 +147,7 @@ func (u Unit) Compare(v Unit) (int, error) {
 		return 0, errors.New("cannot compare units with different dimensions")
 	}
 	switch {
-	case math.Abs(u.Value-v.Value) < 1e-12:
+	case math.Abs(u.Value-v.Value) < floatEpsilon:
 		return 0, nil
 	case u.Value < v.Value:
 		return -1, nil
@@ -339,9 +355,9 @@ func (u Unit) Equals(v Unit) bool {
 	}
 
 	// Use relative epsilon for large values
-	eps := 1e-12
+	eps := floatEpsilon
 	if math.Abs(u.Value) > 1.0 || math.Abs(v.Value) > 1.0 {
-		eps = 1e-12 * math.Max(math.Abs(u.Value), math.Abs(v.Value))
+		eps = floatEpsilon * math.Max(math.Abs(u.Value), math.Abs(v.Value))
 	}
 
 	return math.Abs(u.Value-v.Value) < eps

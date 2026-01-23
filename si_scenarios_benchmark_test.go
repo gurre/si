@@ -71,7 +71,7 @@ func BenchmarkHeatExchangerDesign(b *testing.B) {
 		lmtd := si.Kelvin.Mul(si.Scalar((deltaT1 - deltaT2) / math.Log(deltaT1/deltaT2)))
 
 		// Calculate required heat transfer area
-		overallHeatTransferCoef := si.Watts(500).Div(si.Meter.Pow(2).Mul(si.Kelvin))
+		overallHeatTransferCoef := si.Watts(500).Div(si.Meter.MustPow(2).Mul(si.Kelvin))
 		requiredArea := heatLoad.Div(overallHeatTransferCoef.Mul(lmtd))
 
 		// Calculate pressure drop (simplified)
@@ -86,17 +86,17 @@ func BenchmarkPumpingSystemAnalysis(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// System parameters
-		flowRate := si.Meter.Pow(3).Mul(si.Scalar(0.05)).Div(si.Second) // 50 L/s
+		flowRate := si.Meter.MustPow(3).Mul(si.Scalar(0.05)).Div(si.Second) // 50 L/s
 		pipeDiameter := si.Meters(0.1)                                  // 100 mm
 		pipeLength := si.Meters(100)                                    // 100 m
 		pipeRoughness := si.Meters(0.0001)                              // 0.1 mm
 		elevationChange := si.Meters(15)                                // 15 m lift
-		fluidDensity := si.Kilograms(1000).Div(si.Meter.Pow(3))         // Water
-		gravity := si.Meters(9.81).Div(si.Second.Pow(2))                // Gravitational acceleration
+		fluidDensity := si.Kilograms(1000).Div(si.Meter.MustPow(3))         // Water
+		gravity := si.Meters(9.81).Div(si.Second.MustPow(2))                // Gravitational acceleration
 
 		// Calculate flow velocity
 		pipeArea := si.Scalar(math.Pi * math.Pow(pipeDiameter.Value/2, 2))
-		velocity := flowRate.Div(si.Meter.Pow(2).Mul(pipeArea))
+		velocity := flowRate.Div(si.Meter.MustPow(2).Mul(pipeArea))
 
 		// Calculate Reynolds number
 		dynamicViscosity := si.Pascal.Mul(si.Second).Mul(si.Scalar(0.001)) // Water at 20°C

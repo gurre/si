@@ -10,7 +10,7 @@ func main() {
 	// Create units with various representations
 	temp := si.Celsius(25.5)                                     // 298.65 K
 	distance := si.Kilometers(1.5)                               // 1.5 km
-	flow := si.Meter.Pow(3).Mul(si.Scalar(0.002)).Div(si.Second) // 0.002 m^3/s
+	flow := si.Meter.MustPow(3).Mul(si.Scalar(0.002)).Div(si.Second) // 0.002 m^3/s
 	fmt.Println(temp, distance, flow)
 
 	// Parse units from strings (e.g., from sensor readings)
